@@ -18,7 +18,12 @@ async function callProxy<T>(operation: string, variables: Record<string, unknown
     throw new SorareApiError('Netzwerkfehler beim Aufruf der Sorare-API')
   }
 
-  const body = (await response.json()) as ProxyResponse<T>
+  let body: ProxyResponse<T>
+  try {
+    body = (await response.json()) as ProxyResponse<T>
+  } catch {
+    throw new SorareApiError('Ungültige Antwort der Sorare-API')
+  }
 
   if (body.errors && body.errors.length > 0) {
     throw new SorareApiError(body.errors[0].message, body.errors)

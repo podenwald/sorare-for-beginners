@@ -86,11 +86,15 @@ if (!array_key_exists($operation, WHITELIST)) {
     respond_error(400, 'Unknown operation');
 }
 
-$variables = isset($body['variables']) && is_array($body['variables']) ? $body['variables'] : [];
+if (isset($body['variables']) && !is_array($body['variables'])) {
+    respond_error(400, 'Invalid "variables"');
+}
+
+$variables = isset($body['variables']) ? $body['variables'] : [];
 
 $payload = json_encode([
     'query' => WHITELIST[$operation],
-    'variables' => $variables,
+    'variables' => (object) $variables,
 ]);
 
 $ch = curl_init(SORARE_ENDPOINT);

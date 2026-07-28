@@ -36,6 +36,11 @@ describe('getPlayer', () => {
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
+    expect(fetch).toHaveBeenCalledWith('/api/sorare-proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation: 'playerDetail', variables: { slug: 'kylian-mbappe-lottin' } }),
+    })
     expect(player.displayName).toBe('Kylian Mbappé')
     expect(player.recentSo5Scores).toEqual([{ score: 87.7, gameDate: '2026-07-18T21:00:00Z' }])
   })
