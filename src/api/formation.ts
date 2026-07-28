@@ -13,6 +13,8 @@ export interface FormationSlot {
   candidate: EvaluatedCandidate | null
 }
 
+export type FormationMode = 'normal' | 'defensiveStack'
+
 const EXACT_POSITION_SLOTS: { label: FormationSlotLabel; position: Player['position'] }[] = [
   { label: 'Goalkeeper', position: 'Goalkeeper' },
   { label: 'Defender', position: 'Defender' },
@@ -43,7 +45,10 @@ function bestCandidate(pool: EvaluatedCandidate[]): EvaluatedCandidate | null {
   return best
 }
 
-export function assignFormation(candidates: EvaluatedCandidate[]): FormationSlot[] {
+export function assignFormation(
+  candidates: EvaluatedCandidate[],
+  mode: FormationMode = 'normal',
+): FormationSlot[] {
   let remaining = candidates.slice()
   const slots: FormationSlot[] = []
 
@@ -56,7 +61,11 @@ export function assignFormation(candidates: EvaluatedCandidate[]): FormationSlot
     }
   }
 
-  const flexPool = remaining.filter((candidate) => candidate.player.position !== 'Goalkeeper')
+  const flexPool = remaining.filter((candidate) =>
+    mode === 'defensiveStack'
+      ? candidate.player.position === 'Defender'
+      : candidate.player.position !== 'Goalkeeper',
+  )
   slots.push({ label: 'Flex', candidate: bestCandidate(flexPool) })
 
   return slots

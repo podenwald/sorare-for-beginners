@@ -129,4 +129,46 @@ describe('assignFormation', () => {
 
     expect(slots.find((slot) => slot.label === 'Forward')?.candidate?.player.slug).toBe('no-data')
   })
+
+  it('fills Flex with the best remaining Defender in defensiveStack mode, even when a higher-scoring non-Defender is available', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('def-2', 'Defender', 50),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('mid-2', 'Midfielder', 75),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const normalSlots = assignFormation(candidates, 'normal')
+    const stackSlots = assignFormation(candidates, 'defensiveStack')
+
+    expect(normalSlots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('mid-2')
+    expect(stackSlots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('def-2')
+  })
+
+  it('leaves Flex empty in defensiveStack mode when no second Defender is available', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const slots = assignFormation(candidates, 'defensiveStack')
+
+    expect(slots.find((slot) => slot.label === 'Flex')?.candidate).toBeNull()
+  })
+
+  it('defaults to normal mode when mode is omitted', () => {
+    const candidates = [
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('mid-2', 'Midfielder', 75),
+    ]
+
+    const slots = assignFormation(candidates)
+
+    expect(slots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('mid-2')
+  })
 })
