@@ -103,11 +103,19 @@ $payload = json_encode([
     'variables' => (object) $variables,
 ]);
 
+$config = @include __DIR__ . '/config.php';
+$apiKey = is_array($config) && !empty($config['sorareApiKey']) ? $config['sorareApiKey'] : null;
+
+$headers = ['Content-Type: application/json'];
+if ($apiKey !== null) {
+    $headers[] = 'APIKEY: ' . $apiKey;
+}
+
 $ch = curl_init(SORARE_ENDPOINT);
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $payload,
-    CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+    CURLOPT_HTTPHEADER => $headers,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 10,
 ]);

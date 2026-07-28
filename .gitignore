@@ -25,3 +25,6 @@ dist-ssr
 
 # Superpowers scratch (task briefs, review diffs, brainstorm mockups)
 .superpowers/
+
+# Generated at deploy time from the SORARE_API_KEY secret — never commit
+public/api/config.php
