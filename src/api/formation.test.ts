@@ -2,16 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { assignFormation } from './formation'
 import type { EvaluatedCandidate } from './formation'
 import type { Player } from './types'
-import type { PlayerEvaluation } from './scoring'
+import type { PlayerEvaluation, EvaluationCategory } from './scoring'
 
 function buildCandidate(
   slug: string,
   position: Player['position'],
   overallValue: number | null,
+  scorePotentialCategory: EvaluationCategory = 'gut',
 ): EvaluatedCandidate {
   const evaluation: PlayerEvaluation = {
     overall: { value: overallValue, category: 'gut' },
-    scorePotential: { value: overallValue, category: 'gut' },
+    scorePotential: { value: overallValue, category: scorePotentialCategory },
     consistency: {
       value: overallValue,
       category: 'gut',
@@ -108,5 +109,24 @@ describe('assignFormation', () => {
 
     expect(slots.every((slot) => slot.candidate === null)).toBe(true)
     expect(slots.map((slot) => slot.label)).toEqual(['Goalkeeper', 'Defender', 'Midfielder', 'Forward', 'Flex'])
+  })
+
+  it('ranks a no-data candidate (unbekannt scorePotential) below a real candidate, even with a higher overall.value', () => {
+    const candidates = [
+      buildCandidate('no-data', 'Forward', 100, 'unbekannt'),
+      buildCandidate('real', 'Forward', 65, 'gut'),
+    ]
+
+    const slots = assignFormation(candidates)
+
+    expect(slots.find((slot) => slot.label === 'Forward')?.candidate?.player.slug).toBe('real')
+  })
+
+  it('still assigns a no-data candidate when it is the only one available for that position', () => {
+    const candidates = [buildCandidate('no-data', 'Forward', 100, 'unbekannt')]
+
+    const slots = assignFormation(candidates)
+
+    expect(slots.find((slot) => slot.label === 'Forward')?.candidate?.player.slug).toBe('no-data')
   })
 })

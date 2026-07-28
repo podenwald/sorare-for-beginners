@@ -11,6 +11,10 @@ function displayCategory(candidate: EvaluatedCandidate): EvaluationCategory {
     : candidate.evaluation.overall.category
 }
 
+function formatScore(value: number | null): string {
+  return value === null ? '–' : String(Math.round(value))
+}
+
 const CATEGORY_ICON: Record<EvaluationCategory, string> = {
   gut: '🟢',
   mittel: '🟡',
@@ -29,19 +33,22 @@ const SLOT_LABEL_TEXT: Record<FormationSlot['label'], string> = {
 export function FormationList({ slots }: FormationListProps) {
   return (
     <ul className="formation-list">
-      {slots.map((slot) => (
-        <li key={slot.label} className="formation-slot">
-          <span className="formation-slot-label">{SLOT_LABEL_TEXT[slot.label]}</span>
-          {slot.candidate ? (
-            <span className="formation-slot-candidate">
-              {slot.candidate.player.displayName} — {slot.candidate.evaluation.overall.value ?? '–'}{' '}
-              {CATEGORY_ICON[displayCategory(slot.candidate)]}
-            </span>
-          ) : (
-            <span className="formation-slot-empty">{SLOT_LABEL_TEXT[slot.label]} hinzufügen</span>
-          )}
-        </li>
-      ))}
+      {slots.map((slot) => {
+        const category = slot.candidate ? displayCategory(slot.candidate) : null
+        return (
+          <li key={slot.label} className="formation-slot">
+            <span className="formation-slot-label">{SLOT_LABEL_TEXT[slot.label]}</span>
+            {slot.candidate && category ? (
+              <span className="formation-slot-candidate">
+                {slot.candidate.player.displayName} — {formatScore(slot.candidate.evaluation.overall.value)}{' '}
+                {CATEGORY_ICON[category]} {category}
+              </span>
+            ) : (
+              <span className="formation-slot-empty">{SLOT_LABEL_TEXT[slot.label]} hinzufügen</span>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }

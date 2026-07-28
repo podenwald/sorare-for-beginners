@@ -20,15 +20,20 @@ const EXACT_POSITION_SLOTS: { label: FormationSlotLabel; position: Player['posit
   { label: 'Forward', position: 'Forward' },
 ]
 
+function rankValue(candidate: EvaluatedCandidate): number {
+  if (candidate.evaluation.scorePotential.category === 'unbekannt') return -Infinity
+  return candidate.evaluation.overall.value ?? -Infinity
+}
+
 function bestCandidate(pool: EvaluatedCandidate[]): EvaluatedCandidate | null {
   if (pool.length === 0) return null
 
   let best = pool[0]
-  let bestValue = best.evaluation.overall.value ?? -Infinity
+  let bestValue = rankValue(best)
 
   for (let i = 1; i < pool.length; i++) {
     const candidate = pool[i]
-    const value = candidate.evaluation.overall.value ?? -Infinity
+    const value = rankValue(candidate)
     if (value > bestValue) {
       best = candidate
       bestValue = value
