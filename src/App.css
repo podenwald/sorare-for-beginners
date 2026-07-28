@@ -101,3 +101,40 @@
   color: var(--text);
   font-style: italic;
 }
+
+.teams-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .teams-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .teams-grid > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.team-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.mode-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
