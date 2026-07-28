@@ -28,9 +28,18 @@ nicht geklärt. ODI-293 arbeitet daher ausschließlich mit Sorare-eigenen Daten.
 `getPlayer()` enthalten. Live-Test (Mbappé, Saison 2025): `{"appearances":31,"minutesPlayed":2606,"substituteIn":2,"substituteOut":9}`.
 
 **Saison-Bestimmung:** automatisch aus dem aktuellen Datum abgeleitet, kein manueller Parameter.
-Europäische Fußballsaisons laufen von Sommer bis Sommer; Regel: ist der aktuelle Monat Juli
-oder später, ist `seasonStartYear` das aktuelle Kalenderjahr, sonst das Vorjahr.
-Beispiel: Juli 2026 → Saison 2026. Januar 2026 → Saison 2025.
+Korrigiert nach einem Live-Test-Fund während der Planung: eine naive "ab Juli = neue Saison"-
+Regel lieferte für Juli 2026 ausschließlich Nullen (`appearances: 0` etc.), weil die neue Saison
+kalendarisch zwar schon begonnen hat, aber noch keine Spiele stattgefunden haben — genau in dem
+Moment, in dem die Bewertung am meisten gebraucht wird (Kaderaufbau vor Saisonstart). Regel daher:
+ist der aktuelle Monat **September oder später**, ist `seasonStartYear` das aktuelle Kalenderjahr;
+in allen anderen Monaten (Januar–August) das Vorjahr — das referenziert dann die zuletzt
+abgeschlossene, vollständige Saison statt einer noch leeren neuen Saison.
+Beispiel: Juli 2026 → Saison 2025 (live bestätigt: 31 Einsätze, 2606 Minuten). Oktober 2026 →
+Saison 2026. Bekannte Einschränkung: MLS läuft kalendarisch anders (Feb–Nov) als die vier
+europäischen Ligen — die einheitliche Regel liefert dort ggf. leicht veraltete statt
+aktuellster Daten, aber keine Nullen. Feinere, liga-spezifische Saisonlogik ist bewusst nicht
+Teil dieses Tickets.
 
 ## Änderungen an bestehendem Code (ODI-291)
 
