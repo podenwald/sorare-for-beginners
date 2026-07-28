@@ -1,5 +1,6 @@
 import type { GraphQLError, Player, PlayerSearchResult } from './types'
 import { SorareApiError } from './types'
+import { getCurrentSeasonStartYear } from './season'
 
 interface ProxyResponse<T> {
   data?: T
@@ -48,11 +49,15 @@ interface PlayerDetailRaw {
     allSo5Scores: {
       nodes: { score: number; game: { date: string } }[]
     }
+    stats: { appearances: number; minutesPlayed: number; substituteIn: number; substituteOut: number } | null
   } | null
 }
 
 export async function getPlayer(slug: string): Promise<Player> {
-  const data = await callProxy<PlayerDetailRaw>('playerDetail', { slug })
+  const data = await callProxy<PlayerDetailRaw>('playerDetail', {
+    slug,
+    seasonStartYear: getCurrentSeasonStartYear(),
+  })
 
   if (!data.anyPlayer) {
     throw new SorareApiError(`Spieler "${slug}" nicht gefunden`)
@@ -72,6 +77,14 @@ export async function getPlayer(slug: string): Promise<Player> {
       score: node.score,
       gameDate: node.game.date,
     })),
+    seasonStats: raw.stats
+      ? {
+          appearances: raw.stats.appearances,
+          minutesPlayed: raw.stats.minutesPlayed,
+          substituteIn: raw.stats.substituteIn,
+          substituteOut: raw.stats.substituteOut,
+        }
+      : null,
   }
 }
 

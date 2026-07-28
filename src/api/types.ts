@@ -24,6 +24,13 @@ export interface So5ScoreEntry {
   gameDate: string
 }
 
+export interface SeasonStats {
+  appearances: number
+  minutesPlayed: number
+  substituteIn: number
+  substituteOut: number
+}
+
 export interface Player {
   slug: string
   displayName: string
@@ -33,6 +40,7 @@ export interface Player {
   activeInjuries: Injury[]
   activeSuspensions: Suspension[]
   recentSo5Scores: So5ScoreEntry[]
+  seasonStats: SeasonStats | null
 }
 
 export interface PlayerSearchHit {
