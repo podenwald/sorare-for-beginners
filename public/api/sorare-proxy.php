@@ -6,7 +6,7 @@ const SORARE_ENDPOINT = 'https://api.sorare.com/graphql';
 
 const WHITELIST = [
     'playerDetail' => <<<'GRAPHQL'
-query PlayerDetail($slug: String!) {
+query PlayerDetail($slug: String!, $seasonStartYear: Int!) {
   anyPlayer(slug: $slug) {
     ... on Player {
       slug
@@ -36,6 +36,12 @@ query PlayerDetail($slug: String!) {
             date
           }
         }
+      }
+      stats(seasonStartYear: $seasonStartYear) {
+        appearances
+        minutesPlayed
+        substituteIn
+        substituteOut
       }
     }
   }
