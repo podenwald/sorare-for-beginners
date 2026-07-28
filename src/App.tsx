@@ -37,7 +37,11 @@ function App() {
         {shortlist.map((player) => (
           <span key={player.slug} className="shortlist-chip">
             {player.displayName}
-            <button type="button" onClick={() => handleRemove(player.slug)}>
+            <button
+              type="button"
+              onClick={() => handleRemove(player.slug)}
+              aria-label={`${player.displayName} von der Shortlist entfernen`}
+            >
               ✕
             </button>
           </span>

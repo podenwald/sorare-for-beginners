@@ -53,14 +53,23 @@ export function PlayerSearch({ onAdd }: PlayerSearchProps) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Spieler suchen..."
+          aria-label="Spieler suchen"
         />
         <button type="submit" disabled={isSearching}>
           {isSearching ? 'Suche läuft...' : 'Suchen'}
         </button>
       </form>
 
-      {searchError && <p className="search-error">{searchError}</p>}
-      {addError && <p className="search-error">{addError}</p>}
+      {searchError && (
+        <p className="search-error" role="alert">
+          {searchError}
+        </p>
+      )}
+      {addError && (
+        <p className="search-error" role="alert">
+          {addError}
+        </p>
+      )}
 
       <ul className="search-results">
         {results.map((hit) => (
