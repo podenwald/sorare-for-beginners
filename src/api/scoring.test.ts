@@ -73,6 +73,15 @@ describe('evaluatePlayer', () => {
     expect(evaluation.overall).toEqual({ value: 80, category: 'gut' })
   })
 
+  it('returns unbekannt for minutesConsistency and rotationRisk when seasonStats is all zeros (the real pre-season API shape)', () => {
+    const evaluation = evaluatePlayer(
+      buildPlayer({ seasonStats: { appearances: 0, minutesPlayed: 0, substituteIn: 0, substituteOut: 0 } }),
+    )
+
+    expect(evaluation.consistency.factors.minutesConsistency).toEqual({ value: null, category: 'unbekannt' })
+    expect(evaluation.consistency.factors.rotationRisk).toEqual({ value: null, category: 'unbekannt' })
+  })
+
   it('returns unbekannt for scorePotential and formTrend when all recent scores are zero', () => {
     const evaluation = evaluatePlayer(
       buildPlayer({

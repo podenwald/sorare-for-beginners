@@ -56,13 +56,13 @@ function calculateAvailability(player: Player): number {
 }
 
 function calculateMinutesConsistency(seasonStats: SeasonStats | null): number | null {
-  if (!seasonStats || seasonStats.appearances === 0) return null
+  if (!seasonStats || !seasonStats.appearances) return null
   const averageMinutes = seasonStats.minutesPlayed / seasonStats.appearances
   return Math.min(100, (averageMinutes / 90) * 100)
 }
 
 function calculateRotationRisk(seasonStats: SeasonStats | null): number | null {
-  if (!seasonStats || seasonStats.appearances === 0) return null
+  if (!seasonStats || !seasonStats.appearances) return null
   const substitutionRate = (seasonStats.substituteIn + seasonStats.substituteOut) / seasonStats.appearances
   return 100 - Math.min(100, substitutionRate * 100)
 }
