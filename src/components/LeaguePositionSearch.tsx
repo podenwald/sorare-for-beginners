@@ -13,9 +13,10 @@ const POSITIONS: { value: Position; label: string }[] = [
 
 interface LeaguePositionSearchProps {
   onAdd: (player: Player) => void
+  label: string
 }
 
-export function LeaguePositionSearch({ onAdd }: LeaguePositionSearchProps) {
+export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps) {
   const [leagueSlug, setLeagueSlug] = useState<string>(LEAGUES[0].slug)
   const [position, setPosition] = useState<Position>('Defender')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
@@ -55,14 +56,22 @@ export function LeaguePositionSearch({ onAdd }: LeaguePositionSearchProps) {
   return (
     <div className="league-position-search">
       <form onSubmit={handleSearch}>
-        <select value={leagueSlug} onChange={(event) => setLeagueSlug(event.target.value)}>
+        <select
+          value={leagueSlug}
+          onChange={(event) => setLeagueSlug(event.target.value)}
+          aria-label={`${label} — Liga`}
+        >
           {LEAGUES.map((league) => (
             <option key={league.slug} value={league.slug}>
               {league.name}
             </option>
           ))}
         </select>
-        <select value={position} onChange={(event) => setPosition(event.target.value as Position)}>
+        <select
+          value={position}
+          onChange={(event) => setPosition(event.target.value as Position)}
+          aria-label={`${label} — Position`}
+        >
           {POSITIONS.map((pos) => (
             <option key={pos.value} value={pos.value}>
               {pos.label}

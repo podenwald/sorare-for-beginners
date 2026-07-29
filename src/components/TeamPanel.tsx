@@ -64,7 +64,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
 
       <PlayerSearch onAdd={handleAdd} label={label} />
 
-      <LeaguePositionSearch onAdd={handleAdd} />
+      <LeaguePositionSearch onAdd={handleAdd} label={label} />
 
       <div className="shortlist">
         {shortlist.map((player) => (
