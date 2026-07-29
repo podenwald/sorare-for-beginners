@@ -57,6 +57,11 @@
   margin-bottom: 24px;
 }
 
+.search-results:empty,
+.shortlist:empty {
+  margin-bottom: 0;
+}
+
 .shortlist-chip {
   display: inline-flex;
   align-items: center;

@@ -135,6 +135,7 @@ describe('assignFormation', () => {
       buildCandidate('gk-1', 'Goalkeeper', 60),
       buildCandidate('def-1', 'Defender', 70),
       buildCandidate('def-2', 'Defender', 50),
+      buildCandidate('def-3', 'Defender', 65),
       buildCandidate('mid-1', 'Midfielder', 80),
       buildCandidate('mid-2', 'Midfielder', 75),
       buildCandidate('fwd-1', 'Forward', 90),
@@ -144,7 +145,8 @@ describe('assignFormation', () => {
     const stackSlots = assignFormation(candidates, 'defensiveStack')
 
     expect(normalSlots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('mid-2')
-    expect(stackSlots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('def-2')
+    expect(stackSlots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('def-3')
+    expect(stackSlots.slice(0, 4)).toEqual(normalSlots.slice(0, 4))
   })
 
   it('leaves Flex empty in defensiveStack mode when no second Defender is available', () => {

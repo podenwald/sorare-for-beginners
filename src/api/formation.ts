@@ -22,6 +22,11 @@ const EXACT_POSITION_SLOTS: { label: FormationSlotLabel; position: Player['posit
   { label: 'Forward', position: 'Forward' },
 ]
 
+const FLEX_ELIGIBLE: Record<FormationMode, (candidate: EvaluatedCandidate) => boolean> = {
+  normal: (candidate) => candidate.player.position !== 'Goalkeeper',
+  defensiveStack: (candidate) => candidate.player.position === 'Defender',
+}
+
 function rankValue(candidate: EvaluatedCandidate): number {
   if (candidate.evaluation.scorePotential.category === 'unbekannt') return -Infinity
   return candidate.evaluation.overall.value ?? -Infinity
@@ -61,11 +66,7 @@ export function assignFormation(
     }
   }
 
-  const flexPool = remaining.filter((candidate) =>
-    mode === 'defensiveStack'
-      ? candidate.player.position === 'Defender'
-      : candidate.player.position !== 'Goalkeeper',
-  )
+  const flexPool = remaining.filter(FLEX_ELIGIBLE[mode])
   slots.push({ label: 'Flex', candidate: bestCandidate(flexPool) })
 
   return slots

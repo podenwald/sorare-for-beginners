@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { FormationList } from './FormationList'
 import { assignFormation } from '../api/formation'
@@ -11,6 +11,8 @@ interface TeamPanelProps {
 }
 
 export function TeamPanel({ label }: TeamPanelProps) {
+  const headingId = useId()
+  const groupName = useId()
   const [shortlist, setShortlist] = useState<Player[]>([])
   const [mode, setMode] = useState<FormationMode>('normal')
 
@@ -33,14 +35,14 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const slots = useMemo(() => assignFormation(candidates, mode), [candidates, mode])
 
   return (
-    <div className="team-panel">
-      <h2>{label}</h2>
+    <section className="team-panel" aria-labelledby={headingId}>
+      <h2 id={headingId}>{label}</h2>
 
-      <div className="mode-toggle">
+      <div className="mode-toggle" role="radiogroup" aria-label={`${label} — Flex-Modus`}>
         <label>
           <input
             type="radio"
-            name={`${label}-mode`}
+            name={groupName}
             value="normal"
             checked={mode === 'normal'}
             onChange={() => setMode('normal')}
@@ -50,7 +52,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
         <label>
           <input
             type="radio"
-            name={`${label}-mode`}
+            name={groupName}
             value="defensiveStack"
             checked={mode === 'defensiveStack'}
             onChange={() => setMode('defensiveStack')}
@@ -59,7 +61,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
         </label>
       </div>
 
-      <PlayerSearch onAdd={handleAdd} />
+      <PlayerSearch onAdd={handleAdd} label={label} />
 
       <div className="shortlist">
         {shortlist.map((player) => (
@@ -77,6 +79,6 @@ export function TeamPanel({ label }: TeamPanelProps) {
       </div>
 
       <FormationList slots={slots} />
-    </div>
+    </section>
   )
 }

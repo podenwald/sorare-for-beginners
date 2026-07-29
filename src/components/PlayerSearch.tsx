@@ -6,9 +6,10 @@ import type { Player, PlayerSearchHit } from '../api/types'
 
 interface PlayerSearchProps {
   onAdd: (player: Player) => void
+  label?: string
 }
 
-export function PlayerSearch({ onAdd }: PlayerSearchProps) {
+export function PlayerSearch({ onAdd, label }: PlayerSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -53,7 +54,7 @@ export function PlayerSearch({ onAdd }: PlayerSearchProps) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Spieler suchen..."
-          aria-label="Spieler suchen"
+          aria-label={label ? `Spieler suchen (${label})` : 'Spieler suchen'}
         />
         <button type="submit" disabled={isSearching}>
           {isSearching ? 'Suche läuft...' : 'Suchen'}
