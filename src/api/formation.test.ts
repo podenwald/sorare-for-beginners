@@ -36,6 +36,7 @@ function buildCandidate(
       activeSuspensions: [],
       recentSo5Scores: [],
       seasonStats: null,
+      sorareAverageScores: { l5: null, l10: null, l40: null },
     },
     evaluation,
   }

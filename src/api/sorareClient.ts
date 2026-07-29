@@ -49,6 +49,9 @@ interface PlayerDetailRaw {
     allSo5Scores: {
       nodes: { score: number; game: { date: string } }[]
     }
+    l5: number | null
+    l10: number | null
+    l40: number | null
     stats: { appearances: number; minutesPlayed: number; substituteIn: number; substituteOut: number } | null
   } | null
 }
@@ -85,6 +88,11 @@ export async function getPlayer(slug: string): Promise<Player> {
           substituteOut: raw.stats.substituteOut,
         }
       : null,
+    sorareAverageScores: {
+      l5: raw.l5,
+      l10: raw.l10,
+      l40: raw.l40,
+    },
   }
 }
 

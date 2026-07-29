@@ -18,6 +18,7 @@ function buildPlayer(overrides: Partial<Player> = {}): Player {
       { score: 80, gameDate: '2026-03-01T00:00:00Z' },
     ],
     seasonStats: { appearances: 30, minutesPlayed: 2700, substituteIn: 0, substituteOut: 0 },
+    sorareAverageScores: { l5: null, l10: null, l40: null },
     ...overrides,
   }
 }

@@ -31,6 +31,12 @@ export interface SeasonStats {
   substituteOut: number
 }
 
+export interface SorareAverageScores {
+  l5: number | null
+  l10: number | null
+  l40: number | null
+}
+
 export interface Player {
   slug: string
   displayName: string
@@ -41,6 +47,7 @@ export interface Player {
   activeSuspensions: Suspension[]
   recentSo5Scores: So5ScoreEntry[]
   seasonStats: SeasonStats | null
+  sorareAverageScores: SorareAverageScores
 }
 
 export interface PlayerSearchHit {

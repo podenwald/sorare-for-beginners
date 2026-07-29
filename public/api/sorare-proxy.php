@@ -37,6 +37,9 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!) {
           }
         }
       }
+      l5: averageScore(type: LAST_FIVE_SO5_AVERAGE_SCORE)
+      l10: averageScore(type: LAST_TEN_PLAYED_SO5_AVERAGE_SCORE)
+      l40: averageScore(type: LAST_FORTY_SO5_AVERAGE_SCORE)
       stats(seasonStartYear: $seasonStartYear) {
         appearances
         minutesPlayed

@@ -31,6 +31,9 @@ describe('getPlayer', () => {
           allSo5Scores: {
             nodes: [{ score: 87.7, game: { date: '2026-07-18T21:00:00Z' } }],
           },
+          l5: null,
+          l10: null,
+          l40: null,
           stats: { appearances: 31, minutesPlayed: 2606, substituteIn: 2, substituteOut: 9 },
         },
       },
@@ -64,6 +67,9 @@ describe('getPlayer', () => {
           activeInjuries: [],
           activeSuspensions: [],
           allSo5Scores: { nodes: [] },
+          l5: null,
+          l10: null,
+          l40: null,
           stats: null,
         },
       },
@@ -72,6 +78,56 @@ describe('getPlayer', () => {
     const player = await getPlayer('kylian-mbappe-lottin')
 
     expect(player.seasonStats).toBeNull()
+  })
+
+  it('maps l5/l10/l40 averageScore fields to sorareAverageScores', async () => {
+    mockFetchOnce({
+      data: {
+        anyPlayer: {
+          slug: 'kylian-mbappe-lottin',
+          displayName: 'Kylian Mbappé',
+          position: 'Forward',
+          age: 27,
+          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+          activeInjuries: [],
+          activeSuspensions: [],
+          allSo5Scores: { nodes: [] },
+          l5: 74,
+          l10: 70,
+          l40: 64,
+          stats: null,
+        },
+      },
+    })
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.sorareAverageScores).toEqual({ l5: 74, l10: 70, l40: 64 })
+  })
+
+  it('maps missing averageScore data to null fields in sorareAverageScores', async () => {
+    mockFetchOnce({
+      data: {
+        anyPlayer: {
+          slug: 'kylian-mbappe-lottin',
+          displayName: 'Kylian Mbappé',
+          position: 'Forward',
+          age: 27,
+          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+          activeInjuries: [],
+          activeSuspensions: [],
+          allSo5Scores: { nodes: [] },
+          l5: null,
+          l10: null,
+          l40: null,
+          stats: null,
+        },
+      },
+    })
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.sorareAverageScores).toEqual({ l5: null, l10: null, l40: null })
   })
 
   it('throws SorareApiError when the player is not found', async () => {
