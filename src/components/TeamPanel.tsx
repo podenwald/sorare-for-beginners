@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
+import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
 import { assignFormation } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
@@ -62,6 +63,8 @@ export function TeamPanel({ label }: TeamPanelProps) {
       </div>
 
       <PlayerSearch onAdd={handleAdd} label={label} />
+
+      <LeaguePositionSearch onAdd={handleAdd} />
 
       <div className="shortlist">
         {shortlist.map((player) => (
