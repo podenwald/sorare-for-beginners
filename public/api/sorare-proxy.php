@@ -37,6 +37,7 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!) {
           }
         }
       }
+      # l5/l10/l40 aliases map to Sorare's AveragePlayerScore enum — no automated test (no PHP test framework); verify manually via curl against api.sorare.com/graphql after any change
       l5: averageScore(type: LAST_FIVE_SO5_AVERAGE_SCORE)
       l10: averageScore(type: LAST_TEN_PLAYED_SO5_AVERAGE_SCORE)
       l40: averageScore(type: LAST_FORTY_SO5_AVERAGE_SCORE)
