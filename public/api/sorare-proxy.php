@@ -72,6 +72,40 @@ query PlayerSearch($query: String!, $page: Int, $pageSize: Int) {
   }
 }
 GRAPHQL,
+    'leagueClubs' => <<<'GRAPHQL'
+query LeagueClubs($leagueSlug: String!) {
+  football {
+    competition(slug: $leagueSlug) {
+      name
+      clubs(first: 30) {
+        nodes {
+          slug
+          name
+        }
+      }
+    }
+  }
+}
+GRAPHQL,
+    'clubPlayers' => <<<'GRAPHQL'
+query ClubPlayers($clubSlug: String!) {
+  football {
+    club(slug: $clubSlug) {
+      name
+      activePlayers(first: 40) {
+        nodes {
+          slug
+          displayName
+          position
+          playingStatus
+          l10: averageScore(type: LAST_TEN_PLAYED_SO5_AVERAGE_SCORE)
+          l40: averageScore(type: LAST_FORTY_SO5_AVERAGE_SCORE)
+        }
+      }
+    }
+  }
+}
+GRAPHQL,
 ];
 
 function respond_error($status, $message) {

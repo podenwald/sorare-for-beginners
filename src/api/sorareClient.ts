@@ -1,6 +1,14 @@
-import type { GraphQLError, Player, PlayerSearchResult } from './types'
+import type { GraphQLError, Player, PlayerSearchHit, PlayerSearchResult, Position } from './types'
 import { SorareApiError } from './types'
 import { getCurrentSeasonStartYear } from './season'
+
+export const LEAGUES = [
+  { slug: 'premier-league-gb-eng', name: 'Premier League' },
+  { slug: 'bundesliga-de', name: 'Bundesliga' },
+  { slug: 'laliga-es', name: 'La Liga' },
+  { slug: 'ligue-1-fr', name: 'Ligue 1' },
+  { slug: 'mlspa', name: 'MLS' },
+] as const
 
 interface ProxyResponse<T> {
   data?: T
@@ -132,4 +140,76 @@ export async function searchPlayers(params: {
       ]
     }),
   }
+}
+
+interface LeagueClubsRaw {
+  football: {
+    competition: {
+      name: string
+      clubs: { nodes: { slug: string; name: string }[] }
+    } | null
+  }
+}
+
+type SorarePlayingStatus = 'NOT_PLAYING' | 'REGULAR' | 'RETIRED' | 'STARTER' | 'SUBSTITUTE' | 'SUPER_SUBSTITUTE'
+
+interface ClubPlayersRaw {
+  football: {
+    club: {
+      name: string
+      activePlayers: {
+        nodes: {
+          slug: string
+          displayName: string
+          position: Player['position']
+          playingStatus: SorarePlayingStatus | null
+          l10: number | null
+          l40: number | null
+        }[]
+      }
+    } | null
+  }
+}
+
+function isRegularStarter(playingStatus: SorarePlayingStatus | null): boolean {
+  return playingStatus === 'STARTER' || playingStatus === 'REGULAR'
+}
+
+function performanceRank(l10: number | null, l40: number | null): number {
+  return (l10 ?? 0) + (l40 ?? 0)
+}
+
+export async function searchPlayersByLeagueAndPosition(
+  leagueSlug: string,
+  position: Position,
+): Promise<PlayerSearchHit[]> {
+  const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
+  const clubs = leagueData.football.competition?.clubs.nodes ?? []
+
+  const clubResults = await Promise.all(
+    clubs.map((club) => callProxy<ClubPlayersRaw>('clubPlayers', { clubSlug: club.slug })),
+  )
+
+  const hits = clubResults.flatMap((clubData) => {
+    const club = clubData.football.club
+    if (!club) return []
+    return club.activePlayers.nodes
+      .filter((player) => player.position === position)
+      .map((player) => ({
+        slug: player.slug,
+        displayName: player.displayName,
+        positions: [player.position],
+        clubName: club.name,
+        l10: player.l10,
+        l40: player.l40,
+        isRegularStarter: isRegularStarter(player.playingStatus),
+      }))
+  })
+
+  hits.sort((a, b) => {
+    if (a.isRegularStarter !== b.isRegularStarter) return a.isRegularStarter ? -1 : 1
+    return performanceRank(b.l10, b.l40) - performanceRank(a.l10, a.l40)
+  })
+
+  return hits.map(({ slug, displayName, positions, clubName }) => ({ slug, displayName, positions, clubName }))
 }

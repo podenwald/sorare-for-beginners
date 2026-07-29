@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getPlayer, searchPlayers } from './sorareClient'
+import { getPlayer, searchPlayers, searchPlayersByLeagueAndPosition } from './sorareClient'
 import { getCurrentSeasonStartYear } from './season'
 import { SorareApiError } from './types'
 
@@ -8,6 +8,18 @@ function mockFetchOnce(body: unknown) {
     'fetch',
     vi.fn().mockResolvedValue({
       json: () => Promise.resolve(body),
+    }),
+  )
+}
+
+function mockFetchSequence(responses: unknown[]) {
+  let call = 0
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation(() => {
+      const body = responses[call]
+      call += 1
+      return Promise.resolve({ json: () => Promise.resolve(body) })
     }),
   )
 }
@@ -180,5 +192,165 @@ describe('searchPlayers', () => {
     expect(result.totalHits).toBe(2)
     expect(result.hits).toHaveLength(1)
     expect(result.hits[0].clubName).toBe('Real Madrid')
+  })
+})
+
+describe('searchPlayersByLeagueAndPosition', () => {
+  it('sorts regular starters before others, then by descending L10+L40 within each group', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: {
+              name: 'Bundesliga',
+              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] },
+            },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  {
+                    slug: 'sub-high-score',
+                    displayName: 'Sub High Score',
+                    position: 'Defender',
+                    playingStatus: 'SUBSTITUTE',
+                    l10: 90,
+                    l40: 90,
+                  },
+                  {
+                    slug: 'starter-low-score',
+                    displayName: 'Starter Low Score',
+                    position: 'Defender',
+                    playingStatus: 'STARTER',
+                    l10: 10,
+                    l40: 10,
+                  },
+                  {
+                    slug: 'regular-high-score',
+                    displayName: 'Regular High Score',
+                    position: 'Defender',
+                    playingStatus: 'REGULAR',
+                    l10: 70,
+                    l40: 70,
+                  },
+                  {
+                    slug: 'wrong-position',
+                    displayName: 'Wrong Position',
+                    position: 'Midfielder',
+                    playingStatus: 'STARTER',
+                    l10: 100,
+                    l40: 100,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['regular-high-score', 'starter-low-score', 'sub-high-score'])
+  })
+
+  it('treats null l10/l40 as lowest priority within a tier', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  {
+                    slug: 'no-data-starter',
+                    displayName: 'No Data Starter',
+                    position: 'Forward',
+                    playingStatus: 'STARTER',
+                    l10: null,
+                    l40: null,
+                  },
+                  {
+                    slug: 'scored-starter',
+                    displayName: 'Scored Starter',
+                    position: 'Forward',
+                    playingStatus: 'STARTER',
+                    l10: 5,
+                    l40: 5,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Forward')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['scored-starter', 'no-data-starter'])
+  })
+
+  it('skips a club with no data and returns an empty array when the competition is not found', async () => {
+    mockFetchSequence([
+      { data: { football: { competition: null } } },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('unknown-league', 'Defender')
+
+    expect(hits).toEqual([])
+  })
+
+  it('only returns PlayerSearchHit fields, no internal sort data', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  {
+                    slug: 'a-player',
+                    displayName: 'A Player',
+                    position: 'Goalkeeper',
+                    playingStatus: 'STARTER',
+                    l10: 50,
+                    l40: 50,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Goalkeeper')
+
+    expect(hits).toEqual([
+      { slug: 'a-player', displayName: 'A Player', positions: ['Goalkeeper'], clubName: 'Club A' },
+    ])
   })
 })
