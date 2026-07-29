@@ -12,7 +12,7 @@ const POSITIONS: { value: Position; label: string }[] = [
 ]
 
 interface LeaguePositionSearchProps {
-  onAdd: (player: Player) => void
+  onAdd: (player: Player) => boolean
   label: string
 }
 
@@ -44,8 +44,10 @@ export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps
     setAddError(null)
     try {
       const player = await getPlayer(slug)
-      onAdd(player)
-      setResults([])
+      const added = onAdd(player)
+      // Deliberately collapses the list after a successful add — unlike PlayerSearch, whose
+      // result sets are small enough to stay useful; this one can return 100+ hits.
+      if (added) setResults([])
     } catch (error) {
       setAddError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler beim Hinzufügen')
     } finally {
@@ -53,12 +55,20 @@ export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps
     }
   }
 
+  function handleFilterChange() {
+    setResults([])
+    setAddError(null)
+  }
+
   return (
     <div className="league-position-search">
       <form onSubmit={handleSearch}>
         <select
           value={leagueSlug}
-          onChange={(event) => setLeagueSlug(event.target.value)}
+          onChange={(event) => {
+            setLeagueSlug(event.target.value)
+            handleFilterChange()
+          }}
           aria-label={`${label} — Liga`}
         >
           {LEAGUES.map((league) => (
@@ -69,7 +79,10 @@ export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps
         </select>
         <select
           value={position}
-          onChange={(event) => setPosition(event.target.value as Position)}
+          onChange={(event) => {
+            setPosition(event.target.value as Position)
+            handleFilterChange()
+          }}
           aria-label={`${label} — Position`}
         >
           {POSITIONS.map((pos) => (

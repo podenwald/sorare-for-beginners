@@ -77,7 +77,7 @@ query LeagueClubs($leagueSlug: String!) {
   football {
     competition(slug: $leagueSlug) {
       name
-      clubs(first: 30) {
+      clubs(first: 50) {
         nodes {
           slug
           name
@@ -92,7 +92,7 @@ query ClubPlayers($clubSlug: String!) {
   football {
     club(slug: $clubSlug) {
       name
-      activePlayers(first: 40) {
+      activePlayers(first: 80) {
         nodes {
           slug
           displayName

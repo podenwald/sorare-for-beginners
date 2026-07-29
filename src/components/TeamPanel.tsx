@@ -17,11 +17,14 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [shortlist, setShortlist] = useState<Player[]>([])
   const [mode, setMode] = useState<FormationMode>('normal')
 
-  function handleAdd(player: Player) {
+  function handleAdd(player: Player): boolean {
+    let added = false
     setShortlist((current) => {
       if (current.some((existing) => existing.slug === player.slug)) return current
+      added = true
       return [...current, player]
     })
+    return added
   }
 
   function handleRemove(slug: string) {

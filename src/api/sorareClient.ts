@@ -186,9 +186,10 @@ export async function searchPlayersByLeagueAndPosition(
   const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
   const clubs = leagueData.football.competition?.clubs.nodes ?? []
 
-  const clubResults = await Promise.all(
+  const settled = await Promise.allSettled(
     clubs.map((club) => callProxy<ClubPlayersRaw>('clubPlayers', { clubSlug: club.slug })),
   )
+  const clubResults = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
 
   const hits = clubResults.flatMap((clubData) => {
     const club = clubData.football.club

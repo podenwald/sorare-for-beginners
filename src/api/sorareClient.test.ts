@@ -353,4 +353,100 @@ describe('searchPlayersByLeagueAndPosition', () => {
       { slug: 'a-player', displayName: 'A Player', positions: ['Goalkeeper'], clubName: 'Club A' },
     ])
   })
+
+  it('merges and sorts results across multiple clubs, keeping each hit tagged with its own club', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: {
+              name: 'Bundesliga',
+              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+            },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  { slug: 'a-starter-low', displayName: 'A Starter Low', position: 'Defender', playingStatus: 'STARTER', l10: 20, l40: 20 },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club B',
+              activePlayers: {
+                nodes: [
+                  { slug: 'b-starter-high', displayName: 'B Starter High', position: 'Defender', playingStatus: 'STARTER', l10: 80, l40: 80 },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+
+    expect(hits).toEqual([
+      { slug: 'b-starter-high', displayName: 'B Starter High', positions: ['Defender'], clubName: 'Club B' },
+      { slug: 'a-starter-low', displayName: 'A Starter Low', positions: ['Defender'], clubName: 'Club A' },
+    ])
+  })
+
+  it('returns results from clubs that succeeded even if another club fetch fails', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: {
+              name: 'Bundesliga',
+              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+            },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  { slug: 'a-starter', displayName: 'A Starter', position: 'Defender', playingStatus: 'STARTER', l10: 50, l40: 50 },
+                ],
+              },
+            },
+          },
+        },
+      },
+      { errors: [{ message: 'Upstream Sorare API unavailable' }] },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+
+    expect(hits).toEqual([
+      { slug: 'a-starter', displayName: 'A Starter', positions: ['Defender'], clubName: 'Club A' },
+    ])
+  })
+
+  it('returns an empty array when the league has zero clubs', async () => {
+    mockFetchSequence([
+      { data: { football: { competition: { name: 'Empty League', clubs: { nodes: [] } } } } },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition('empty-league', 'Defender')
+
+    expect(hits).toEqual([])
+  })
 })
