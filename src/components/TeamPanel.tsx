@@ -4,13 +4,18 @@ import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
 import { assignFormation } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
-import { LEAGUES, getClubRoster, getLeagueClubs, getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
+import {
+  CANDIDATES_PER_POSITION,
+  FORMATION_POSITIONS,
+  LEAGUES,
+  getClubRoster,
+  getLeagueClubs,
+  getPlayer,
+  searchPlayersByLeagueAndPosition,
+} from '../api/sorareClient'
 import { SorareApiError } from '../api/types'
-import type { Player, Position } from '../api/types'
+import type { Player } from '../api/types'
 import type { EvaluatedCandidate, FormationMode } from '../api/formation'
-
-const AUTO_FILL_POSITIONS: Position[] = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward']
-const CANDIDATES_PER_POSITION = 2
 
 interface TeamPanelProps {
   label: string
@@ -69,7 +74,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     setAutoFillError(null)
     try {
       const picksPerPosition = await Promise.all(
-        AUTO_FILL_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
+        FORMATION_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
       )
       const topSlugs = picksPerPosition.flatMap((hits) => hits.slice(0, CANDIDATES_PER_POSITION).map((hit) => hit.slug))
       const settled = await Promise.allSettled(topSlugs.map((slug) => getPlayer(slug)))

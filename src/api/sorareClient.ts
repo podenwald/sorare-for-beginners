@@ -179,6 +179,9 @@ function performanceRank(l10: number | null, l40: number | null): number {
   return (l10 ?? 0) + (l40 ?? 0)
 }
 
+export const FORMATION_POSITIONS: Position[] = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward']
+export const CANDIDATES_PER_POSITION = 2
+
 export async function getLeagueClubs(leagueSlug: string): Promise<{ slug: string; name: string }[]> {
   const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
   return leagueData.football.competition?.clubs.nodes ?? []
@@ -189,14 +192,19 @@ export async function getClubRoster(clubSlug: string): Promise<PlayerSearchHit[]
   const club = clubData.football.club
   if (!club) return []
 
-  return club.activePlayers.nodes
-    .filter((player) => isRegularStarter(player.playingStatus))
-    .map((player) => ({
+  return FORMATION_POSITIONS.flatMap((position) => {
+    const topPlayers = club.activePlayers.nodes
+      .filter((player) => player.position === position && isRegularStarter(player.playingStatus))
+      .sort((a, b) => performanceRank(b.l10, b.l40) - performanceRank(a.l10, a.l40))
+      .slice(0, CANDIDATES_PER_POSITION)
+
+    return topPlayers.map((player) => ({
       slug: player.slug,
       displayName: player.displayName,
       positions: [player.position],
       clubName: club.name,
     }))
+  })
 }
 
 export async function searchPlayersByLeagueAndPosition(
