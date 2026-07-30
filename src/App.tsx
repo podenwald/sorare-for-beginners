@@ -5,8 +5,8 @@ import './App.css'
 function App() {
   return (
     <div className="page-layout">
-      <Legend />
       <TeamPanel label="Mein Team" />
+      <Legend />
     </div>
   )
 }
