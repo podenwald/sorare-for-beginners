@@ -19,6 +19,7 @@ export function PlayerSearch({ onAdd, label }: PlayerSearchProps) {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [addingSlug, setAddingSlug] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
+  const [now] = useState(() => new Date())
 
   async function handleSearch(event: FormEvent) {
     event.preventDefault()
@@ -46,7 +47,7 @@ export function PlayerSearch({ onAdd, label }: PlayerSearchProps) {
     setAddingSlug(slug)
     setAddError(null)
     try {
-      const player = await getPlayer(slug)
+      const player = resultDetails[slug] ?? (await getPlayer(slug))
       onAdd(player)
     } catch (error) {
       setAddError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler beim Hinzufügen')
@@ -88,7 +89,7 @@ export function PlayerSearch({ onAdd, label }: PlayerSearchProps) {
             <li key={hit.slug}>
               {player ? (
                 <span>
-                  <PlayerScoreSummary player={player} evaluation={evaluatePlayer(player)} />
+                  <PlayerScoreSummary player={player} evaluation={evaluatePlayer(player, now)} />
                 </span>
               ) : (
                 <span>

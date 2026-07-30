@@ -24,6 +24,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [autoFillLeague, setAutoFillLeague] = useState<string>(LEAGUES[0].slug)
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [autoFillError, setAutoFillError] = useState<string | null>(null)
+  const [now] = useState(() => new Date())
 
   function handleAdd(player: Player): boolean {
     let added = false
@@ -60,8 +61,8 @@ export function TeamPanel({ label }: TeamPanelProps) {
   }
 
   const candidates: EvaluatedCandidate[] = useMemo(
-    () => shortlist.map((player) => ({ player, evaluation: evaluatePlayer(player) })),
-    [shortlist],
+    () => shortlist.map((player) => ({ player, evaluation: evaluatePlayer(player, now) })),
+    [shortlist, now],
   )
 
   const slots = useMemo(() => assignFormation(candidates, mode), [candidates, mode])

@@ -20,8 +20,8 @@ interface PlayerScoreSummaryProps {
 
 export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryProps) {
   const category = displayCategory(evaluation)
-  const availabilityWarning = getAvailabilityWarning(player)
-  const scoreExplanation = getScoreExplanation(evaluation, availabilityWarning !== null)
+  const availabilityWarning = getAvailabilityWarning(evaluation.availabilityIssue)
+  const scoreExplanation = getScoreExplanation(evaluation)
 
   return (
     <span className="player-score-summary">

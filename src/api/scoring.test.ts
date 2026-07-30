@@ -177,5 +177,26 @@ describe('evaluatePlayer', () => {
       // longer of the two (60+ days) wins -> severe factor 0.5, same as the single-severe-injury test
       expect(evaluation.overall.value).toBeCloseTo(36.5, 1)
     })
+
+    it('documents the combined effect of both availability mechanisms for a strong, long-injured player', () => {
+      const strongPlayer = buildPlayer({
+        recentSo5Scores: [
+          { score: 88, gameDate: '2026-04-01T00:00:00Z' },
+          { score: 88, gameDate: '2026-03-01T00:00:00Z' },
+          { score: 88, gameDate: '2026-02-01T00:00:00Z' },
+          { score: 88, gameDate: '2026-01-01T00:00:00Z' },
+        ],
+      })
+
+      const healthy = evaluatePlayer(strongPlayer, now)
+      const injured = evaluatePlayer(
+        { ...strongPlayer, activeInjuries: [{ kind: 'ACL Tear', status: 'active', startDate: '2026-06-01', expectedEndDate: '2026-12-01' }] },
+        now,
+      )
+
+      expect(healthy.overall.value).toBeGreaterThan(85)
+      expect(injured.overall.value).toBeLessThan(healthy.overall.value! * 0.6)
+      expect(injured.overall.category).toBe('riskant')
+    })
   })
 })

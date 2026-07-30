@@ -23,6 +23,7 @@ function buildCandidate(
         formTrend: { value: 100, category: 'gut' },
       },
     },
+    availabilityIssue: null,
   }
 
   return {

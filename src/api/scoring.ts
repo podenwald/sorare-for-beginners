@@ -18,6 +18,7 @@ export interface PlayerEvaluation {
       formTrend: EvaluatedValue
     }
   }
+  availabilityIssue: AvailabilityIssue | null
 }
 
 export function categorize(value: number | null): EvaluationCategory {
@@ -65,19 +66,68 @@ function daysUntil(dateString: string | null, now: Date): number | null {
   return (new Date(dateString).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
 }
 
-function calculateInjuryPenaltyFactor(player: Player, now: Date): number {
-  if (player.activeInjuries.length === 0 && player.activeSuspensions.length === 0) return 1
+export interface AvailabilityIssue {
+  kind: string | null
+  expectedReturn: string | null
+  isOverdue: boolean
+  penaltyFactor: number
+}
 
-  const daysRemaining = [
-    ...player.activeInjuries.map((injury) => daysUntil(injury.expectedEndDate, now)),
-    ...player.activeSuspensions.map((suspension) => daysUntil(suspension.endDate, now)),
-  ].filter((value): value is number => value !== null)
+interface IssueCandidate {
+  kind: string | null
+  expectedReturn: string | null
+  daysRemaining: number | null
+}
 
-  if (daysRemaining.length === 0) return INJURY_PENALTY_UNKNOWN_DURATION
+function collectIssueCandidates(player: Player, now: Date): IssueCandidate[] {
+  return [
+    ...player.activeInjuries.map((injury) => ({
+      kind: injury.kind,
+      expectedReturn: injury.expectedEndDate,
+      daysRemaining: daysUntil(injury.expectedEndDate, now),
+    })),
+    ...player.activeSuspensions.map((suspension) => ({
+      kind: suspension.kind ?? suspension.reason,
+      expectedReturn: suspension.endDate,
+      daysRemaining: daysUntil(suspension.endDate, now),
+    })),
+  ]
+}
 
-  const maxDaysRemaining = Math.max(0, Math.min(INJURY_PENALTY_MAX_DAYS, Math.max(...daysRemaining)))
-  const severity = maxDaysRemaining / INJURY_PENALTY_MAX_DAYS
-  return INJURY_PENALTY_MILD - severity * (INJURY_PENALTY_MILD - INJURY_PENALTY_SEVERE)
+function pickDrivingIssue(candidates: IssueCandidate[]): IssueCandidate {
+  const withKnownDuration = candidates.filter((candidate) => candidate.daysRemaining !== null)
+  if (withKnownDuration.length === 0) return candidates[0]
+  return withKnownDuration.reduce((longest, current) =>
+    (current.daysRemaining ?? -Infinity) > (longest.daysRemaining ?? -Infinity) ? current : longest,
+  )
+}
+
+// This penalty factor COMPOUNDS with calculateAvailability() above, which already drops
+// the `availability` consistency sub-factor to 20 (from 100) for the same condition
+// (an active injury/suspension). Both react to the same trigger and multiply together —
+// for a player with a long-duration issue, the combined effect can roughly halve their
+// score. This is deliberate: the player is never hard-excluded (still displayed, still
+// addable, still rankable), only heavily deprioritized relative to healthy alternatives.
+// Reviewed and confirmed as intended behavior during ODI-306's final review.
+function calculateAvailabilityIssue(player: Player, now: Date): AvailabilityIssue | null {
+  const candidates = collectIssueCandidates(player, now)
+  if (candidates.length === 0) return null
+
+  const driving = pickDrivingIssue(candidates)
+  const isOverdue = driving.daysRemaining !== null && driving.daysRemaining < 0
+  const penaltyFactor =
+    driving.daysRemaining === null
+      ? INJURY_PENALTY_UNKNOWN_DURATION
+      : INJURY_PENALTY_MILD -
+        (Math.max(0, Math.min(INJURY_PENALTY_MAX_DAYS, driving.daysRemaining)) / INJURY_PENALTY_MAX_DAYS) *
+          (INJURY_PENALTY_MILD - INJURY_PENALTY_SEVERE)
+
+  return {
+    kind: driving.kind,
+    expectedReturn: driving.expectedReturn,
+    isOverdue,
+    penaltyFactor,
+  }
 }
 
 function calculateMinutesConsistency(seasonStats: SeasonStats | null): number | null {
@@ -125,8 +175,8 @@ export function evaluatePlayer(player: Player, now: Date = new Date()): PlayerEv
   )
 
   const rawOverallValue = combineWeighted(scorePotential, 0.6, consistencyValue, 0.4)
-  const injuryPenaltyFactor = calculateInjuryPenaltyFactor(player, now)
-  const overallValue = rawOverallValue === null ? null : rawOverallValue * injuryPenaltyFactor
+  const availabilityIssue = calculateAvailabilityIssue(player, now)
+  const overallValue = rawOverallValue === null ? null : rawOverallValue * (availabilityIssue?.penaltyFactor ?? 1)
 
   return {
     overall: toEvaluatedValue(overallValue),
@@ -140,5 +190,6 @@ export function evaluatePlayer(player: Player, now: Date = new Date()): PlayerEv
         formTrend: toEvaluatedValue(formTrend),
       },
     },
+    availabilityIssue,
   }
 }
