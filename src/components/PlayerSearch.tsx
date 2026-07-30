@@ -92,7 +92,7 @@ export function PlayerSearch({ onAdd, label }: PlayerSearchProps) {
                   <PlayerScoreSummary player={player} evaluation={evaluatePlayer(player, now)} />
                 </span>
               ) : (
-                <span>
+                <span className="result-name">
                   {hit.displayName}
                   {hit.clubName ? ` — ${hit.clubName}` : ''}
                 </span>

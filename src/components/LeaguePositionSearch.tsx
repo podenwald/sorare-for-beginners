@@ -110,7 +110,7 @@ export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps
       <ul className="search-results">
         {results.map((hit) => (
           <li key={hit.slug}>
-            <span>{hit.displayName}</span>
+            <span className="result-name">{hit.displayName}</span>
             <span>{hit.clubName ?? 'Kein Verein'}</span>
             <button type="button" onClick={() => handleAdd(hit.slug)} disabled={addingSlug === hit.slug}>
               {addingSlug === hit.slug ? 'Wird geladen...' : 'Hinzufügen'}

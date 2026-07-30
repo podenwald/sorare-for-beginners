@@ -45,6 +45,11 @@
   border-bottom: 1px solid var(--border);
 }
 
+.result-name {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
 .shortlist {
   display: flex;
   flex-wrap: wrap;

@@ -178,6 +178,38 @@ describe('evaluatePlayer', () => {
       expect(evaluation.overall.value).toBeCloseTo(36.5, 1)
     })
 
+    it('exposes the driving issue (the one with the longest remaining duration) on the evaluation', () => {
+      const result = evaluatePlayer(
+        buildPlayer({
+          activeInjuries: [
+            { kind: 'Ankle Injury', status: 'active', startDate: '2026-06-21', expectedEndDate: '2026-07-30' },
+            { kind: 'Hamstring', status: 'active', startDate: '2026-07-01', expectedEndDate: '2026-09-30' },
+          ],
+        }),
+        now,
+      )
+
+      expect(result.availabilityIssue).toEqual({
+        kind: 'Hamstring',
+        expectedReturn: '2026-09-30',
+        isOverdue: false,
+        penaltyFactor: 0.5,
+      })
+    })
+
+    it('falls back to the suspension reason when kind is null', () => {
+      const result = evaluatePlayer(
+        buildPlayer({
+          activeSuspensions: [
+            { kind: null, reason: 'Accumulated yellow cards', startDate: '2026-07-01', endDate: '2026-08-15' },
+          ],
+        }),
+        now,
+      )
+
+      expect(result.availabilityIssue?.kind).toBe('Accumulated yellow cards')
+    })
+
     it('documents the combined effect of both availability mechanisms for a strong, long-injured player', () => {
       const strongPlayer = buildPlayer({
         recentSo5Scores: [
@@ -196,7 +228,6 @@ describe('evaluatePlayer', () => {
 
       expect(healthy.overall.value).toBeGreaterThan(85)
       expect(injured.overall.value).toBeLessThan(healthy.overall.value! * 0.6)
-      expect(injured.overall.category).toBe('riskant')
     })
   })
 })

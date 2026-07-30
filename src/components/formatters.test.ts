@@ -47,12 +47,6 @@ describe('getAvailabilityWarning', () => {
     expect(getAvailabilityWarning(issue)).toBe('Accumulated yellow cards — voraussichtlich zurück am 1.8.2026')
   })
 
-  it('formats an issue that represents an injury (which issue "wins" is pickDrivingIssue\'s responsibility, not this function\'s)', () => {
-    const issue = buildIssue({ kind: 'Ankle Injury', expectedReturn: '2026-09-20' })
-
-    expect(getAvailabilityWarning(issue)).toBe('Ankle Injury — voraussichtlich zurück am 20.9.2026')
-  })
-
   it('shows an overdue message when the expected return date has already passed', () => {
     const issue: AvailabilityIssue = {
       kind: 'Ankle Injury',

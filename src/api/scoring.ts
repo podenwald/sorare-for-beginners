@@ -114,7 +114,11 @@ function calculateAvailabilityIssue(player: Player, now: Date): AvailabilityIssu
   if (candidates.length === 0) return null
 
   const driving = pickDrivingIssue(candidates)
-  const isOverdue = driving.daysRemaining !== null && driving.daysRemaining < 0
+  // daysRemaining is fractional (a full date-time `now` diffed against a date-only
+  // expectedEndDate parsed as UTC midnight), so on the expected-return day itself it goes
+  // slightly negative shortly after UTC midnight. Require a full day past to avoid flagging
+  // that day's own expected return as overdue.
+  const isOverdue = driving.daysRemaining !== null && driving.daysRemaining < -1
   const penaltyFactor =
     driving.daysRemaining === null
       ? INJURY_PENALTY_UNKNOWN_DURATION
