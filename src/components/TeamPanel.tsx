@@ -44,11 +44,9 @@ export function TeamPanel({ label }: TeamPanelProps) {
         AUTO_FILL_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
       )
       const topSlugs = picksPerPosition.flatMap((hits) => hits.slice(0, CANDIDATES_PER_POSITION).map((hit) => hit.slug))
-      const players = await Promise.all(topSlugs.map((slug) => getPlayer(slug)))
-      const availablePlayers = players.filter(
-        (player) => player.activeInjuries.length === 0 && player.activeSuspensions.length === 0,
-      )
-      availablePlayers.forEach((player) => handleAdd(player))
+      const settled = await Promise.allSettled(topSlugs.map((slug) => getPlayer(slug)))
+      const players = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+      players.forEach((player) => handleAdd(player))
     } catch (error) {
       setAutoFillError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler bei der KI-Auswahl')
     } finally {
