@@ -4,8 +4,13 @@ import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
 import { assignFormation } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
-import type { Player } from '../api/types'
+import { LEAGUES, getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
+import { SorareApiError } from '../api/types'
+import type { Player, Position } from '../api/types'
 import type { EvaluatedCandidate, FormationMode } from '../api/formation'
+
+const AUTO_FILL_POSITIONS: Position[] = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward']
+const CANDIDATES_PER_POSITION = 2
 
 interface TeamPanelProps {
   label: string
@@ -16,6 +21,9 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const groupName = useId()
   const [shortlist, setShortlist] = useState<Player[]>([])
   const [mode, setMode] = useState<FormationMode>('normal')
+  const [autoFillLeague, setAutoFillLeague] = useState<string>(LEAGUES[0].slug)
+  const [isAutoFilling, setIsAutoFilling] = useState(false)
+  const [autoFillError, setAutoFillError] = useState<string | null>(null)
 
   function handleAdd(player: Player): boolean {
     let added = false
@@ -25,6 +33,26 @@ export function TeamPanel({ label }: TeamPanelProps) {
       return [...current, player]
     })
     return added
+  }
+
+  async function handleAutoFill() {
+    setIsAutoFilling(true)
+    setAutoFillError(null)
+    try {
+      const picksPerPosition = await Promise.all(
+        AUTO_FILL_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
+      )
+      const topSlugs = picksPerPosition.flatMap((hits) => hits.slice(0, CANDIDATES_PER_POSITION).map((hit) => hit.slug))
+      const players = await Promise.all(topSlugs.map((slug) => getPlayer(slug)))
+      const availablePlayers = players.filter(
+        (player) => player.activeInjuries.length === 0 && player.activeSuspensions.length === 0,
+      )
+      availablePlayers.forEach((player) => handleAdd(player))
+    } catch (error) {
+      setAutoFillError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler bei der KI-Auswahl')
+    } finally {
+      setIsAutoFilling(false)
+    }
   }
 
   function handleRemove(slug: string) {
@@ -68,6 +96,28 @@ export function TeamPanel({ label }: TeamPanelProps) {
       <PlayerSearch onAdd={handleAdd} label={label} />
 
       <LeaguePositionSearch onAdd={handleAdd} label={label} />
+
+      <div className="auto-fill">
+        <select
+          value={autoFillLeague}
+          onChange={(event) => setAutoFillLeague(event.target.value)}
+          aria-label={`${label} — KI-Team Liga`}
+        >
+          {LEAGUES.map((league) => (
+            <option key={league.slug} value={league.slug}>
+              {league.name}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={handleAutoFill} disabled={isAutoFilling}>
+          {isAutoFilling ? 'KI wählt aus...' : 'KI-Team erstellen'}
+        </button>
+        {autoFillError && (
+          <p className="search-error" role="alert">
+            {autoFillError}
+          </p>
+        )}
+      </div>
 
       <div className="shortlist">
         {shortlist.map((player) => (
