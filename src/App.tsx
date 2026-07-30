@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TeamPanel } from './components/TeamPanel'
+import { Legend } from './components/Legend'
 import './App.css'
 
 const TEAM_LABELS = ['Team 1', 'Team 2', 'Team 3']
@@ -22,6 +23,7 @@ function App() {
           </label>
         ))}
       </div>
+      <Legend />
       <div className="teams-grid">
         {TEAM_LABELS.map((label, index) => activeTeams[index] && <TeamPanel key={label} label={label} />)}
       </div>
