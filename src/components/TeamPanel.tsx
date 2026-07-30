@@ -1,10 +1,10 @@
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
 import { assignFormation } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
-import { LEAGUES, getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
+import { LEAGUES, getClubRoster, getLeagueClubs, getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
 import { SorareApiError } from '../api/types'
 import type { Player, Position } from '../api/types'
 import type { EvaluatedCandidate, FormationMode } from '../api/formation'
@@ -24,7 +24,35 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [autoFillLeague, setAutoFillLeague] = useState<string>(LEAGUES[0].slug)
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [autoFillError, setAutoFillError] = useState<string | null>(null)
+  const [stackLeague, setStackLeague] = useState<string>(LEAGUES[0].slug)
+  const [stackClubs, setStackClubs] = useState<{ slug: string; name: string }[]>([])
+  const [stackClubSlug, setStackClubSlug] = useState<string>('')
+  const [isLoadingClubs, setIsLoadingClubs] = useState(false)
+  const [isStackFilling, setIsStackFilling] = useState(false)
+  const [stackError, setStackError] = useState<string | null>(null)
   const [now] = useState(() => new Date())
+
+  useEffect(() => {
+    if (mode !== 'teamStack') return
+    let cancelled = false
+    setIsLoadingClubs(true)
+    setStackError(null)
+    getLeagueClubs(stackLeague)
+      .then((clubs) => {
+        if (cancelled) return
+        setStackClubs(clubs)
+        setStackClubSlug(clubs[0]?.slug ?? '')
+      })
+      .catch(() => {
+        if (!cancelled) setStackError('Clubs konnten nicht geladen werden')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingClubs(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [mode, stackLeague])
 
   function handleAdd(player: Player): boolean {
     let added = false
@@ -54,6 +82,22 @@ export function TeamPanel({ label }: TeamPanelProps) {
     }
   }
 
+  async function handleLoadClubRoster() {
+    if (!stackClubSlug) return
+    setIsStackFilling(true)
+    setStackError(null)
+    try {
+      const hits = await getClubRoster(stackClubSlug)
+      const settled = await Promise.allSettled(hits.map((hit) => getPlayer(hit.slug)))
+      const players = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+      players.forEach((player) => handleAdd(player))
+    } catch (error) {
+      setStackError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler beim Laden des Teams')
+    } finally {
+      setIsStackFilling(false)
+    }
+  }
+
   function handleRemove(slug: string) {
     setShortlist((current) => current.filter((player) => player.slug !== slug))
   }
@@ -63,7 +107,10 @@ export function TeamPanel({ label }: TeamPanelProps) {
     [shortlist, now],
   )
 
-  const slots = useMemo(() => assignFormation(candidates, mode), [candidates, mode])
+  const slots = useMemo(
+    () => assignFormation(candidates, mode, mode === 'teamStack' ? stackClubSlug : undefined),
+    [candidates, mode, stackClubSlug],
+  )
 
   return (
     <section className="team-panel" aria-labelledby={headingId}>
@@ -89,6 +136,16 @@ export function TeamPanel({ label }: TeamPanelProps) {
             onChange={() => setMode('defensiveStack')}
           />
           Defensiv-Stack
+        </label>
+        <label>
+          <input
+            type="radio"
+            name={groupName}
+            value="teamStack"
+            checked={mode === 'teamStack'}
+            onChange={() => setMode('teamStack')}
+          />
+          Team-Stack
         </label>
       </div>
 
@@ -117,6 +174,42 @@ export function TeamPanel({ label }: TeamPanelProps) {
           </p>
         )}
       </div>
+
+      {mode === 'teamStack' && (
+        <div className="team-stack">
+          <select
+            value={stackLeague}
+            onChange={(event) => setStackLeague(event.target.value)}
+            aria-label={`${label} — Team-Stack Liga`}
+          >
+            {LEAGUES.map((league) => (
+              <option key={league.slug} value={league.slug}>
+                {league.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={stackClubSlug}
+            onChange={(event) => setStackClubSlug(event.target.value)}
+            aria-label={`${label} — Team-Stack Club`}
+            disabled={isLoadingClubs || stackClubs.length === 0}
+          >
+            {stackClubs.map((club) => (
+              <option key={club.slug} value={club.slug}>
+                {club.name}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={handleLoadClubRoster} disabled={isStackFilling || !stackClubSlug}>
+            {isStackFilling ? 'Team wird geladen...' : 'Team laden'}
+          </button>
+          {stackError && (
+            <p className="search-error" role="alert">
+              {stackError}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="shortlist">
         {shortlist.map((player) => (

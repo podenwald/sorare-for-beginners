@@ -13,7 +13,7 @@ export interface FormationSlot {
   candidate: EvaluatedCandidate | null
 }
 
-export type FormationMode = 'normal' | 'defensiveStack'
+export type FormationMode = 'normal' | 'defensiveStack' | 'teamStack'
 
 const EXACT_POSITION_SLOTS: { label: FormationSlotLabel; position: Player['position'] }[] = [
   { label: 'Goalkeeper', position: 'Goalkeeper' },
@@ -25,6 +25,7 @@ const EXACT_POSITION_SLOTS: { label: FormationSlotLabel; position: Player['posit
 const FLEX_ELIGIBLE: Record<FormationMode, (candidate: EvaluatedCandidate) => boolean> = {
   normal: (candidate) => candidate.player.position !== 'Goalkeeper',
   defensiveStack: (candidate) => candidate.player.position === 'Defender',
+  teamStack: (candidate) => candidate.player.position !== 'Goalkeeper',
 }
 
 function rankValue(candidate: EvaluatedCandidate): number {
@@ -53,8 +54,12 @@ function bestCandidate(pool: EvaluatedCandidate[]): EvaluatedCandidate | null {
 export function assignFormation(
   candidates: EvaluatedCandidate[],
   mode: FormationMode = 'normal',
+  stackClubSlug?: string,
 ): FormationSlot[] {
-  let remaining = candidates.slice()
+  let remaining =
+    mode === 'teamStack'
+      ? candidates.filter((candidate) => candidate.player.activeClub?.slug === stackClubSlug)
+      : candidates.slice()
   const slots: FormationSlot[] = []
 
   for (const { label, position } of EXACT_POSITION_SLOTS) {

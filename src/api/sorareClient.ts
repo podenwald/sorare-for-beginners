@@ -179,6 +179,24 @@ function performanceRank(l10: number | null, l40: number | null): number {
   return (l10 ?? 0) + (l40 ?? 0)
 }
 
+export async function getLeagueClubs(leagueSlug: string): Promise<{ slug: string; name: string }[]> {
+  const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
+  return leagueData.football.competition?.clubs.nodes ?? []
+}
+
+export async function getClubRoster(clubSlug: string): Promise<PlayerSearchHit[]> {
+  const clubData = await callProxy<ClubPlayersRaw>('clubPlayers', { clubSlug })
+  const club = clubData.football.club
+  if (!club) return []
+
+  return club.activePlayers.nodes.map((player) => ({
+    slug: player.slug,
+    displayName: player.displayName,
+    positions: [player.position],
+    clubName: club.name,
+  }))
+}
+
 export async function searchPlayersByLeagueAndPosition(
   leagueSlug: string,
   position: Position,
