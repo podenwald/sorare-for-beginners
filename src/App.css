@@ -134,11 +134,34 @@
   font-style: italic;
 }
 
+.page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .page-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .page-layout .legend {
+    flex: 0 0 280px;
+    position: sticky;
+    top: 16px;
+  }
+
+  .page-layout .team-panel {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .legend {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 16px;
-  margin-bottom: 24px;
 }
 
 .legend summary {
