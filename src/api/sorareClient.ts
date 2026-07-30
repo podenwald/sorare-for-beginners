@@ -189,12 +189,14 @@ export async function getClubRoster(clubSlug: string): Promise<PlayerSearchHit[]
   const club = clubData.football.club
   if (!club) return []
 
-  return club.activePlayers.nodes.map((player) => ({
-    slug: player.slug,
-    displayName: player.displayName,
-    positions: [player.position],
-    clubName: club.name,
-  }))
+  return club.activePlayers.nodes
+    .filter((player) => isRegularStarter(player.playingStatus))
+    .map((player) => ({
+      slug: player.slug,
+      displayName: player.displayName,
+      positions: [player.position],
+      clubName: club.name,
+    }))
 }
 
 export async function searchPlayersByLeagueAndPosition(
