@@ -1,22 +1,9 @@
-import type { EvaluatedCandidate, FormationSlot } from '../api/formation'
-import type { EvaluationCategory } from '../api/scoring'
-import { formatScore, formatSorareAverages } from './formatters'
+import type { FormationSlot } from '../api/formation'
+import { formatScore } from './formatters'
+import { PlayerScoreSummary } from './PlayerScoreSummary'
 
 interface FormationListProps {
   slots: FormationSlot[]
-}
-
-function displayCategory(candidate: EvaluatedCandidate): EvaluationCategory {
-  return candidate.evaluation.scorePotential.category === 'unbekannt'
-    ? 'unbekannt'
-    : candidate.evaluation.overall.category
-}
-
-const CATEGORY_ICON: Record<EvaluationCategory, string> = {
-  gut: '🟢',
-  mittel: '🟡',
-  riskant: '🔴',
-  unbekannt: '⚪',
 }
 
 const SLOT_LABEL_TEXT: Record<FormationSlot['label'], string> = {
@@ -28,26 +15,26 @@ const SLOT_LABEL_TEXT: Record<FormationSlot['label'], string> = {
 }
 
 export function FormationList({ slots }: FormationListProps) {
+  const l10Sum = slots.reduce((sum, slot) => sum + (slot.candidate?.player.sorareAverageScores.l10 ?? 0), 0)
+
   return (
     <ul className="formation-list">
-      {slots.map((slot) => {
-        const category = slot.candidate ? displayCategory(slot.candidate) : null
-        return (
-          <li key={slot.label} className="formation-slot">
-            <span className="formation-slot-label">{SLOT_LABEL_TEXT[slot.label]}</span>
-            {slot.candidate && category ? (
-              <span className="formation-slot-candidate">
-                {slot.candidate.player.displayName} — {formatScore(slot.candidate.evaluation.overall.value)}{' '}
-                {CATEGORY_ICON[category]} {category}
-                <br />
-                <small>{formatSorareAverages(slot.candidate.player.sorareAverageScores)}</small>
-              </span>
-            ) : (
-              <span className="formation-slot-empty">{SLOT_LABEL_TEXT[slot.label]} hinzufügen</span>
-            )}
-          </li>
-        )
-      })}
+      {slots.map((slot) => (
+        <li key={slot.label} className="formation-slot">
+          <span className="formation-slot-label">{SLOT_LABEL_TEXT[slot.label]}</span>
+          {slot.candidate ? (
+            <span className="formation-slot-candidate">
+              <PlayerScoreSummary player={slot.candidate.player} evaluation={slot.candidate.evaluation} />
+            </span>
+          ) : (
+            <span className="formation-slot-empty">{SLOT_LABEL_TEXT[slot.label]} hinzufügen</span>
+          )}
+        </li>
+      ))}
+      <li className="formation-total">
+        <span className="formation-slot-label">Team L10-Summe</span>
+        <strong>{formatScore(l10Sum)}</strong>
+      </li>
     </ul>
   )
 }
