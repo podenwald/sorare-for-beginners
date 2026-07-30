@@ -31,7 +31,8 @@ export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryPro
         </span>
       )}
       <span className="player-score-summary-text">
-        {player.displayName} — {formatScore(evaluation.overall.value)}{' '}
+        {player.displayName}
+        {player.activeClub && ` (${player.activeClub.name})`} — {formatScore(evaluation.overall.value)}{' '}
         <span className="icon-tooltip" data-tooltip={scoreExplanation}>
           {CATEGORY_ICON[category]}
         </span>{' '}
