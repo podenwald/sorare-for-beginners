@@ -55,6 +55,31 @@ function calculateAvailability(player: Player): number {
   return hasActiveIssue ? 20 : 100
 }
 
+const INJURY_PENALTY_MAX_DAYS = 60
+const INJURY_PENALTY_MILD = 0.9
+const INJURY_PENALTY_SEVERE = 0.5
+const INJURY_PENALTY_UNKNOWN_DURATION = 0.7
+
+function daysUntil(dateString: string | null, now: Date): number | null {
+  if (!dateString) return null
+  return (new Date(dateString).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+}
+
+function calculateInjuryPenaltyFactor(player: Player, now: Date): number {
+  if (player.activeInjuries.length === 0 && player.activeSuspensions.length === 0) return 1
+
+  const daysRemaining = [
+    ...player.activeInjuries.map((injury) => daysUntil(injury.expectedEndDate, now)),
+    ...player.activeSuspensions.map((suspension) => daysUntil(suspension.endDate, now)),
+  ].filter((value): value is number => value !== null)
+
+  if (daysRemaining.length === 0) return INJURY_PENALTY_UNKNOWN_DURATION
+
+  const maxDaysRemaining = Math.max(0, Math.min(INJURY_PENALTY_MAX_DAYS, Math.max(...daysRemaining)))
+  const severity = maxDaysRemaining / INJURY_PENALTY_MAX_DAYS
+  return INJURY_PENALTY_MILD - severity * (INJURY_PENALTY_MILD - INJURY_PENALTY_SEVERE)
+}
+
 function calculateMinutesConsistency(seasonStats: SeasonStats | null): number | null {
   if (!seasonStats || !seasonStats.appearances) return null
   const averageMinutes = seasonStats.minutesPlayed / seasonStats.appearances
@@ -85,7 +110,7 @@ function calculateFormTrend(player: Player): number | null {
   return Math.max(0, Math.min(100, 50 + (newerAverage - olderAverage)))
 }
 
-export function evaluatePlayer(player: Player): PlayerEvaluation {
+export function evaluatePlayer(player: Player, now: Date = new Date()): PlayerEvaluation {
   const scorePotential = calculateScorePotential(player)
 
   const availability = calculateAvailability(player)
@@ -99,7 +124,9 @@ export function evaluatePlayer(player: Player): PlayerEvaluation {
     ),
   )
 
-  const overallValue = combineWeighted(scorePotential, 0.6, consistencyValue, 0.4)
+  const rawOverallValue = combineWeighted(scorePotential, 0.6, consistencyValue, 0.4)
+  const injuryPenaltyFactor = calculateInjuryPenaltyFactor(player, now)
+  const overallValue = rawOverallValue === null ? null : rawOverallValue * injuryPenaltyFactor
 
   return {
     overall: toEvaluatedValue(overallValue),

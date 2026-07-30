@@ -98,4 +98,84 @@ describe('evaluatePlayer', () => {
     expect(evaluation.consistency.value).toEqual(100)
     expect(evaluation.overall).toEqual({ value: 100, category: 'gut' })
   })
+
+  describe('injury/suspension penalty', () => {
+    const now = new Date('2026-07-30T00:00:00Z')
+
+    it('applies no penalty when there is no active injury or suspension', () => {
+      const evaluation = evaluatePlayer(buildPlayer(), now)
+
+      expect(evaluation.overall.value).toBeCloseTo(81, 5)
+    })
+
+    it('applies the severe penalty when the injury has 60+ days remaining', () => {
+      const evaluation = evaluatePlayer(
+        buildPlayer({
+          activeInjuries: [
+            { kind: 'Ankle Injury', status: 'active', startDate: '2026-06-21', expectedEndDate: '2026-09-30' },
+          ],
+        }),
+        now,
+      )
+
+      // raw overall (availability drops to 20): 0.6*70 + 0.4*avg(20,100,100,90) = 0.6*70 + 0.4*77.5 = 73
+      // severe factor at 60+ days remaining: 0.5 -> 73 * 0.5 = 36.5
+      expect(evaluation.overall.value).toBeCloseTo(36.5, 1)
+      expect(evaluation.overall.category).toBe('riskant')
+    })
+
+    it('applies only the mild penalty when the injury ends today', () => {
+      const evaluation = evaluatePlayer(
+        buildPlayer({
+          activeInjuries: [
+            { kind: 'Ankle Injury', status: 'active', startDate: '2026-06-21', expectedEndDate: '2026-07-30' },
+          ],
+        }),
+        now,
+      )
+
+      // mild factor at 0 days remaining: 0.9 -> 73 * 0.9 = 65.7
+      expect(evaluation.overall.value).toBeCloseTo(65.7, 1)
+      expect(evaluation.overall.category).toBe('mittel')
+    })
+
+    it('applies the flat unknown-duration penalty when expectedEndDate is null', () => {
+      const evaluation = evaluatePlayer(
+        buildPlayer({
+          activeInjuries: [{ kind: 'Ankle Injury', status: 'active', startDate: '2026-06-21', expectedEndDate: null }],
+        }),
+        now,
+      )
+
+      // unknown-duration factor: 0.7 -> 73 * 0.7 = 51.1
+      expect(evaluation.overall.value).toBeCloseTo(51.1, 1)
+      expect(evaluation.overall.category).toBe('mittel')
+    })
+
+    it('treats an active suspension the same as an injury for the penalty', () => {
+      const evaluation = evaluatePlayer(
+        buildPlayer({
+          activeSuspensions: [{ kind: 'Red Card', reason: null, startDate: '2026-07-25', endDate: '2026-09-30' }],
+        }),
+        now,
+      )
+
+      expect(evaluation.overall.value).toBeCloseTo(36.5, 1)
+    })
+
+    it('uses the longest remaining duration when multiple issues are active', () => {
+      const evaluation = evaluatePlayer(
+        buildPlayer({
+          activeInjuries: [
+            { kind: 'Ankle Injury', status: 'active', startDate: '2026-06-21', expectedEndDate: '2026-07-30' },
+            { kind: 'Hamstring', status: 'active', startDate: '2026-07-01', expectedEndDate: '2026-09-30' },
+          ],
+        }),
+        now,
+      )
+
+      // longer of the two (60+ days) wins -> severe factor 0.5, same as the single-severe-injury test
+      expect(evaluation.overall.value).toBeCloseTo(36.5, 1)
+    })
+  })
 })
