@@ -134,19 +134,6 @@
   font-style: italic;
 }
 
-.team-toggles {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.team-toggles label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
 .legend {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -171,24 +158,6 @@
 
 .legend li {
   margin-bottom: 4px;
-}
-
-.teams-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-@media (min-width: 900px) {
-  .teams-grid {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-
-  .teams-grid > * {
-    flex: 1;
-    min-width: 0;
-  }
 }
 
 .team-panel {
