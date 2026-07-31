@@ -37,6 +37,13 @@ export interface SorareAverageScores {
   l40: number | null
 }
 
+export interface MarketPrices {
+  classicEurCents: number | null
+  inSeasonEurCents: number | null
+}
+
+export type MarketRarity = 'limited' | 'rare' | 'super_rare' | 'unique'
+
 export interface Player {
   slug: string
   displayName: string
@@ -48,6 +55,7 @@ export interface Player {
   recentSo5Scores: So5ScoreEntry[]
   seasonStats: SeasonStats | null
   sorareAverageScores: SorareAverageScores
+  marketPrices: MarketPrices
 }
 
 export interface PlayerSearchHit {

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
@@ -8,13 +8,14 @@ import {
   CANDIDATES_PER_POSITION,
   FORMATION_POSITIONS,
   LEAGUES,
+  MARKET_RARITIES,
   getClubRoster,
   getLeagueClubs,
   getPlayer,
   searchPlayersByLeagueAndPosition,
 } from '../api/sorareClient'
 import { SorareApiError } from '../api/types'
-import type { Player } from '../api/types'
+import type { MarketRarity, Player } from '../api/types'
 import type { EvaluatedCandidate, FormationMode } from '../api/formation'
 
 interface TeamPanelProps {
@@ -36,6 +37,9 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [isStackFilling, setIsStackFilling] = useState(false)
   const [stackError, setStackError] = useState<string | null>(null)
   const [now] = useState(() => new Date())
+  const [marketRarity, setMarketRarity] = useState<MarketRarity>('limited')
+  const shortlistRef = useRef(shortlist)
+  shortlistRef.current = shortlist
 
   useEffect(() => {
     if (mode !== 'teamStack') return
@@ -59,6 +63,26 @@ export function TeamPanel({ label }: TeamPanelProps) {
     }
   }, [mode, stackLeague])
 
+  // Re-fetches already-shortlisted players so their Classic/In-Season prices reflect the newly picked rarity.
+  useEffect(() => {
+    const current = shortlistRef.current
+    if (current.length === 0) return
+    let cancelled = false
+    Promise.allSettled(current.map((player) => getPlayer(player.slug, marketRarity))).then((settled) => {
+      if (cancelled) return
+      setShortlist((prev) =>
+        prev.map((player) => {
+          const index = current.findIndex((p) => p.slug === player.slug)
+          const outcome = index >= 0 ? settled[index] : undefined
+          return outcome?.status === 'fulfilled' ? outcome.value : player
+        }),
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [marketRarity])
+
   function handleAdd(player: Player): boolean {
     let added = false
     setShortlist((current) => {
@@ -77,7 +101,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
         FORMATION_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
       )
       const topSlugs = picksPerPosition.flatMap((hits) => hits.slice(0, CANDIDATES_PER_POSITION).map((hit) => hit.slug))
-      const settled = await Promise.allSettled(topSlugs.map((slug) => getPlayer(slug)))
+      const settled = await Promise.allSettled(topSlugs.map((slug) => getPlayer(slug, marketRarity)))
       const players = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
       players.forEach((player) => handleAdd(player))
     } catch (error) {
@@ -93,7 +117,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     setStackError(null)
     try {
       const hits = await getClubRoster(stackClubSlug)
-      const settled = await Promise.allSettled(hits.map((hit) => getPlayer(hit.slug)))
+      const settled = await Promise.allSettled(hits.map((hit) => getPlayer(hit.slug, marketRarity)))
       const players = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
       players.forEach((player) => handleAdd(player))
     } catch (error) {
@@ -154,9 +178,26 @@ export function TeamPanel({ label }: TeamPanelProps) {
         </label>
       </div>
 
-      <PlayerSearch onAdd={handleAdd} label={label} />
+      <div className="market-rarity">
+        <label>
+          Marktpreis-Rarity:{' '}
+          <select
+            value={marketRarity}
+            onChange={(event) => setMarketRarity(event.target.value as MarketRarity)}
+            aria-label={`${label} — Marktpreis-Rarity`}
+          >
+            {MARKET_RARITIES.map((rarity) => (
+              <option key={rarity.value} value={rarity.value}>
+                {rarity.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <LeaguePositionSearch onAdd={handleAdd} label={label} />
+      <PlayerSearch onAdd={handleAdd} label={label} marketRarity={marketRarity} />
+
+      <LeaguePositionSearch onAdd={handleAdd} label={label} marketRarity={marketRarity} />
 
       <div className="auto-fill">
         <select

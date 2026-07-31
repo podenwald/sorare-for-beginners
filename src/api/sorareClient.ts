@@ -1,4 +1,4 @@
-import type { GraphQLError, Player, PlayerSearchHit, PlayerSearchResult, Position } from './types'
+import type { GraphQLError, MarketRarity, Player, PlayerSearchHit, PlayerSearchResult, Position } from './types'
 import { SorareApiError } from './types'
 import { getCurrentSeasonStartYear } from './season'
 
@@ -9,6 +9,13 @@ export const LEAGUES = [
   { slug: 'ligue-1-fr', name: 'Ligue 1' },
   { slug: 'mlspa', name: 'MLS' },
 ] as const
+
+export const MARKET_RARITIES: { value: MarketRarity; label: string }[] = [
+  { value: 'limited', label: 'Limited' },
+  { value: 'rare', label: 'Rare' },
+  { value: 'super_rare', label: 'Super Rare' },
+  { value: 'unique', label: 'Unique' },
+]
 
 interface ProxyResponse<T> {
   data?: T
@@ -61,13 +68,22 @@ interface PlayerDetailRaw {
     l10: number | null
     l40: number | null
     stats: { appearances: number; minutesPlayed: number; substituteIn: number; substituteOut: number } | null
+    classicPrice: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null
+    inSeasonPrice: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null
   } | null
 }
 
-export async function getPlayer(slug: string): Promise<Player> {
+function extractOfferPrice(
+  card: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null,
+): number | null {
+  return card?.liveSingleSaleOffer?.receiverSide.amounts.eurCents ?? null
+}
+
+export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
   const data = await callProxy<PlayerDetailRaw>('playerDetail', {
     slug,
     seasonStartYear: getCurrentSeasonStartYear(),
+    rarity: marketRarity,
   })
 
   if (!data.anyPlayer) {
@@ -100,6 +116,10 @@ export async function getPlayer(slug: string): Promise<Player> {
       l5: raw.l5,
       l10: raw.l10,
       l40: raw.l40,
+    },
+    marketPrices: {
+      classicEurCents: extractOfferPrice(raw.classicPrice),
+      inSeasonEurCents: extractOfferPrice(raw.inSeasonPrice),
     },
   }
 }

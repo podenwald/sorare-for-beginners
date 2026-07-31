@@ -59,7 +59,7 @@ describe('getPlayer', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         operation: 'playerDetail',
-        variables: { slug: 'kylian-mbappe-lottin', seasonStartYear: expectedSeasonStartYear },
+        variables: { slug: 'kylian-mbappe-lottin', seasonStartYear: expectedSeasonStartYear, rarity: 'limited' },
       }),
     })
     expect(player.displayName).toBe('Kylian Mbappé')

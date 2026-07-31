@@ -1,6 +1,6 @@
 import type { Player } from '../api/types'
 import type { EvaluationCategory, PlayerEvaluation } from '../api/scoring'
-import { formatScore, formatSorareAverage, getAvailabilityWarning, getScoreExplanation } from './formatters'
+import { formatMarketPrice, formatScore, formatSorareAverage, getAvailabilityWarning, getScoreExplanation } from './formatters'
 
 const CATEGORY_ICON: Record<EvaluationCategory, string> = {
   gut: '🟢',
@@ -42,6 +42,11 @@ export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryPro
           L5 {formatSorareAverage(player.sorareAverageScores.l5)} ·{' '}
           <strong>L10 {formatSorareAverage(player.sorareAverageScores.l10)}</strong> · L40{' '}
           {formatSorareAverage(player.sorareAverageScores.l40)}
+        </small>
+        <br />
+        <small>
+          Classic {formatMarketPrice(player.marketPrices.classicEurCents)} · In-Season{' '}
+          {formatMarketPrice(player.marketPrices.inSeasonEurCents)}
         </small>
       </span>
     </span>

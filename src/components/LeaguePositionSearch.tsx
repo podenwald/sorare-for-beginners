@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { getPlayer, LEAGUES, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
 import { SorareApiError } from '../api/types'
-import type { Player, PlayerSearchHit, Position } from '../api/types'
+import type { MarketRarity, Player, PlayerSearchHit, Position } from '../api/types'
 
 const POSITIONS: { value: Position; label: string }[] = [
   { value: 'Goalkeeper', label: 'Torwart' },
@@ -14,9 +14,10 @@ const POSITIONS: { value: Position; label: string }[] = [
 interface LeaguePositionSearchProps {
   onAdd: (player: Player) => boolean
   label: string
+  marketRarity: MarketRarity
 }
 
-export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps) {
+export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePositionSearchProps) {
   const [leagueSlug, setLeagueSlug] = useState<string>(LEAGUES[0].slug)
   const [position, setPosition] = useState<Position>('Defender')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
@@ -43,7 +44,7 @@ export function LeaguePositionSearch({ onAdd, label }: LeaguePositionSearchProps
     setAddingSlug(slug)
     setAddError(null)
     try {
-      const player = await getPlayer(slug)
+      const player = await getPlayer(slug, marketRarity)
       const added = onAdd(player)
       // Deliberately collapses the list after a successful add — unlike PlayerSearch, whose
       // result sets are small enough to stay useful; this one can return 100+ hits.

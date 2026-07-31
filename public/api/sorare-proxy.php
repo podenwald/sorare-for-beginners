@@ -6,7 +6,7 @@ const SORARE_ENDPOINT = 'https://api.sorare.com/graphql';
 
 const WHITELIST = [
     'playerDetail' => <<<'GRAPHQL'
-query PlayerDetail($slug: String!, $seasonStartYear: Int!) {
+query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity!) {
   anyPlayer(slug: $slug) {
     ... on Player {
       slug
@@ -46,6 +46,25 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!) {
         minutesPlayed
         substituteIn
         substituteOut
+      }
+      # Lowest currently-listed sale price for the requested rarity, Classic vs. In-Season
+      classicPrice: lowestPriceAnyCard(inSeason: false, rarity: $rarity) {
+        liveSingleSaleOffer {
+          receiverSide {
+            amounts {
+              eurCents
+            }
+          }
+        }
+      }
+      inSeasonPrice: lowestPriceAnyCard(inSeason: true, rarity: $rarity) {
+        liveSingleSaleOffer {
+          receiverSide {
+            amounts {
+              eurCents
+            }
+          }
+        }
       }
     }
   }

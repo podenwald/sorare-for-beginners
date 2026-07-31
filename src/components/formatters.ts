@@ -8,6 +8,10 @@ export function formatSorareAverage(value: number | null): string {
   return value === null || value === 0 ? '–' : formatScore(value)
 }
 
+export function formatMarketPrice(eurCents: number | null): string {
+  return eurCents === null ? 'kein Angebot' : `${(eurCents / 100).toFixed(2)} €`
+}
+
 function formatExpectedReturn(expectedReturn: string | null, isOverdue: boolean): string {
   if (!expectedReturn) return 'Rückkehr unbekannt'
   const formatted = new Date(expectedReturn).toLocaleDateString('de-DE')
