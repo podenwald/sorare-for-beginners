@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getPlayer, searchPlayers, searchPlayersByLeagueAndPosition } from './sorareClient'
+import { getClubRoster, getLeagueClubs, getPlayer, searchPlayers, searchPlayersByLeagueAndPosition } from './sorareClient'
 import { getCurrentSeasonStartYear } from './season'
 import { SorareApiError } from './types'
 
@@ -591,5 +591,154 @@ describe('searchPlayersByLeagueAndPosition', () => {
     const hits = await searchPlayersByLeagueAndPosition('empty-league', 'Defender')
 
     expect(hits).toEqual([])
+  })
+})
+
+describe('getLeagueClubs', () => {
+  it('returns the clubs for a competition', async () => {
+    mockFetchOnce({
+      data: {
+        football: {
+          competition: {
+            name: 'Bundesliga',
+            clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+          },
+        },
+      },
+    })
+
+    const clubs = await getLeagueClubs('bundesliga-de')
+
+    expect(clubs).toEqual([{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }])
+  })
+
+  it('returns an empty array when the competition is not found', async () => {
+    mockFetchOnce({ data: { football: { competition: null } } })
+
+    const clubs = await getLeagueClubs('unknown-league')
+
+    expect(clubs).toEqual([])
+  })
+})
+
+describe('getClubRoster', () => {
+  function clubPlayersResponse(nodes: unknown[]) {
+    return {
+      data: {
+        football: {
+          club: {
+            name: 'Club A',
+            activePlayers: { nodes },
+          },
+        },
+      },
+    }
+  }
+
+  it('returns the empty array when the club is not found', async () => {
+    mockFetchOnce({ data: { football: { club: null } } })
+
+    const hits = await getClubRoster('unknown-club')
+
+    expect(hits).toEqual([])
+  })
+
+  it('excludes players who are not regular starters', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'starter-gk', displayName: 'Starter GK', position: 'Goalkeeper', playingStatus: 'STARTER', l10: 50, l40: 50 },
+        { slug: 'substitute-gk', displayName: 'Substitute GK', position: 'Goalkeeper', playingStatus: 'SUBSTITUTE', l10: 90, l40: 90 },
+        { slug: 'not-playing-gk', displayName: 'Not Playing GK', position: 'Goalkeeper', playingStatus: 'NOT_PLAYING', l10: 95, l40: 95 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['starter-gk'])
+  })
+
+  it('treats REGULAR the same as STARTER (both count as a regular starter)', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'regular-gk', displayName: 'Regular GK', position: 'Goalkeeper', playingStatus: 'REGULAR', l10: 50, l40: 50 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['regular-gk'])
+  })
+
+  it('keeps only the top 2 regular starters per position, ranked by L10+L40', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'def-low', displayName: 'Def Low', position: 'Defender', playingStatus: 'STARTER', l10: 10, l40: 10 },
+        { slug: 'def-high', displayName: 'Def High', position: 'Defender', playingStatus: 'STARTER', l10: 90, l40: 90 },
+        { slug: 'def-mid', displayName: 'Def Mid', position: 'Defender', playingStatus: 'STARTER', l10: 50, l40: 50 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['def-high', 'def-mid'])
+  })
+
+  it('treats null l10/l40 as the lowest rank, not zero-vs-zero ties in original order', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'no-data', displayName: 'No Data', position: 'Forward', playingStatus: 'STARTER', l10: null, l40: null },
+        { slug: 'scored', displayName: 'Scored', position: 'Forward', playingStatus: 'STARTER', l10: 5, l40: 5 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['scored', 'no-data'])
+  })
+
+  it('returns each hit tagged with the club name and a single-element positions array', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'a-player', displayName: 'A Player', position: 'Midfielder', playingStatus: 'STARTER', l10: 50, l40: 50 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits).toEqual([
+      { slug: 'a-player', displayName: 'A Player', positions: ['Midfielder'], clubName: 'Club A' },
+    ])
+  })
+
+  it('returns fewer than 2 players for a position when the club has fewer than 2 regular starters there', async () => {
+    // Real-world equivalent: a club whose only recognized STARTER/REGULAR goalkeeper is a single
+    // player (backups marked SUBSTITUTE/NOT_PLAYING) — confirmed to occur for real clubs during
+    // manual verification. getClubRoster does not backfill from non-regular-starters; this is the
+    // current, deliberate behavior (mirrors the KI-Team auto-fill's own top-2-per-position logic),
+    // not a defect — this test pins it down so a future change doesn't silently alter it.
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'only-gk', displayName: 'Only GK', position: 'Goalkeeper', playingStatus: 'STARTER', l10: 50, l40: 50 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug)).toEqual(['only-gk'])
+  })
+
+  it('covers all 4 exact positions independently, not just the first one found', async () => {
+    mockFetchOnce(
+      clubPlayersResponse([
+        { slug: 'gk', displayName: 'GK', position: 'Goalkeeper', playingStatus: 'STARTER', l10: 50, l40: 50 },
+        { slug: 'def', displayName: 'Def', position: 'Defender', playingStatus: 'STARTER', l10: 50, l40: 50 },
+        { slug: 'mid', displayName: 'Mid', position: 'Midfielder', playingStatus: 'STARTER', l10: 50, l40: 50 },
+        { slug: 'fwd', displayName: 'Fwd', position: 'Forward', playingStatus: 'STARTER', l10: 50, l40: 50 },
+      ]),
+    )
+
+    const hits = await getClubRoster('club-a')
+
+    expect(hits.map((hit) => hit.slug).sort()).toEqual(['def', 'fwd', 'gk', 'mid'])
   })
 })
