@@ -9,6 +9,7 @@ function buildCandidate(
   position: Player['position'],
   overallValue: number | null,
   scorePotentialCategory: EvaluationCategory = 'gut',
+  activeClubSlug: string | null = null,
 ): EvaluatedCandidate {
   const evaluation: PlayerEvaluation = {
     overall: { value: overallValue, category: 'gut' },
@@ -32,7 +33,7 @@ function buildCandidate(
       displayName: slug,
       position,
       age: 25,
-      activeClub: null,
+      activeClub: activeClubSlug ? { name: activeClubSlug, slug: activeClubSlug } : null,
       activeInjuries: [],
       activeSuspensions: [],
       recentSo5Scores: [],
@@ -181,5 +182,70 @@ describe('assignFormation', () => {
     const slots = assignFormation(candidates)
 
     expect(slots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('mid-2')
+  })
+
+  it('in teamStack mode, only assigns candidates from the given club, ignoring higher-scoring candidates from other clubs', () => {
+    const candidates = [
+      buildCandidate('gk-club-a', 'Goalkeeper', 60, 'gut', 'club-a'),
+      buildCandidate('def-club-a', 'Defender', 50, 'gut', 'club-a'),
+      buildCandidate('def-club-b', 'Defender', 95, 'gut', 'club-b'),
+      buildCandidate('mid-club-a', 'Midfielder', 55, 'gut', 'club-a'),
+      buildCandidate('fwd-club-a', 'Forward', 45, 'gut', 'club-a'),
+    ]
+
+    const slots = assignFormation(candidates, 'teamStack', 'club-a')
+
+    expect(slots.map((slot) => slot.candidate?.player.slug)).toEqual([
+      'gk-club-a',
+      'def-club-a',
+      'mid-club-a',
+      'fwd-club-a',
+      undefined,
+    ])
+  })
+
+  it('in teamStack mode, never assigns a goalkeeper to Flex, even from the same club with no alternative', () => {
+    const candidates = [
+      buildCandidate('gk-1-club-a', 'Goalkeeper', 60, 'gut', 'club-a'),
+      buildCandidate('gk-2-club-a', 'Goalkeeper', 90, 'gut', 'club-a'),
+    ]
+
+    const slots = assignFormation(candidates, 'teamStack', 'club-a')
+
+    expect(slots.find((slot) => slot.label === 'Goalkeeper')?.candidate?.player.slug).toBe('gk-2-club-a')
+    expect(slots.find((slot) => slot.label === 'Flex')?.candidate).toBeNull()
+  })
+
+  it('in teamStack mode, fills Flex with the best remaining non-goalkeeper from the same club', () => {
+    const candidates = [
+      buildCandidate('gk-club-a', 'Goalkeeper', 60, 'gut', 'club-a'),
+      buildCandidate('def-1-club-a', 'Defender', 70, 'gut', 'club-a'),
+      buildCandidate('def-2-club-a', 'Defender', 55, 'gut', 'club-a'),
+      buildCandidate('mid-club-a', 'Midfielder', 80, 'gut', 'club-a'),
+      buildCandidate('fwd-club-a', 'Forward', 90, 'gut', 'club-a'),
+    ]
+
+    const slots = assignFormation(candidates, 'teamStack', 'club-a')
+
+    expect(slots.find((slot) => slot.label === 'Flex')?.candidate?.player.slug).toBe('def-2-club-a')
+  })
+
+  it('in teamStack mode, returns all-null slots when no candidate belongs to the given club', () => {
+    const candidates = [
+      buildCandidate('gk-club-b', 'Goalkeeper', 60, 'gut', 'club-b'),
+      buildCandidate('def-club-b', 'Defender', 70, 'gut', 'club-b'),
+    ]
+
+    const slots = assignFormation(candidates, 'teamStack', 'club-a')
+
+    expect(slots.every((slot) => slot.candidate === null)).toBe(true)
+  })
+
+  it('in teamStack mode, returns all-null slots when stackClubSlug is undefined (no club selected yet)', () => {
+    const candidates = [buildCandidate('gk-club-a', 'Goalkeeper', 60, 'gut', 'club-a')]
+
+    const slots = assignFormation(candidates, 'teamStack', undefined)
+
+    expect(slots.every((slot) => slot.candidate === null)).toBe(true)
   })
 })
