@@ -216,6 +216,19 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
   })
 
+  it('maps a live offer with no eurCents value (eurCents: null) to null', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: null } } } },
+        { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: null } } } },
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+  })
+
   it('passes the requested rarity as the rarity variable, defaulting to limited', async () => {
     mockFetchOnce(playerDetailResponse(null, null))
 
