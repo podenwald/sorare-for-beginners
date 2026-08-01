@@ -161,6 +161,82 @@ describe('getPlayer', () => {
   })
 })
 
+describe('getPlayer market prices', () => {
+  function playerDetailResponse(classicPrice: unknown, inSeasonPrice: unknown) {
+    return {
+      data: {
+        anyPlayer: {
+          slug: 'kylian-mbappe-lottin',
+          displayName: 'Kylian Mbappé',
+          position: 'Forward',
+          age: 27,
+          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+          activeInjuries: [],
+          activeSuspensions: [],
+          allSo5Scores: { nodes: [] },
+          l5: null,
+          l10: null,
+          l40: null,
+          stats: null,
+          classicPrice,
+          inSeasonPrice,
+        },
+      },
+    }
+  }
+
+  it('maps a live sale offer on both cards to eurCents values', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: 5498 } } } },
+        { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: 6000 } } } },
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices).toEqual({ classicEurCents: 5498, inSeasonEurCents: 6000 })
+  })
+
+  it('maps a card with no active offer (liveSingleSaleOffer: null) to null', async () => {
+    mockFetchOnce(
+      playerDetailResponse({ liveSingleSaleOffer: null }, { liveSingleSaleOffer: null }),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+  })
+
+  it('maps no matching card at all (classicPrice/inSeasonPrice: null) to null', async () => {
+    mockFetchOnce(playerDetailResponse(null, null))
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+  })
+
+  it('passes the requested rarity as the rarity variable, defaulting to limited', async () => {
+    mockFetchOnce(playerDetailResponse(null, null))
+
+    await getPlayer('kylian-mbappe-lottin')
+
+    const call = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]
+    const body = JSON.parse((call[1] as RequestInit).body as string)
+    expect(body.variables.rarity).toBe('limited')
+  })
+
+  it('passes an explicit rarity through as the rarity variable', async () => {
+    mockFetchOnce(playerDetailResponse(null, null))
+
+    await getPlayer('kylian-mbappe-lottin', 'super_rare')
+
+    const call = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]
+    const body = JSON.parse((call[1] as RequestInit).body as string)
+    expect(body.variables.rarity).toBe('super_rare')
+  })
+})
+
 describe('searchPlayers', () => {
   it('maps search hits, skipping entries without anyPlayer', async () => {
     mockFetchOnce({
