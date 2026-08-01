@@ -39,12 +39,26 @@ export interface SorareAverageScores {
 
 export type MarketRarity = 'limited' | 'rare' | 'super_rare' | 'unique'
 
+/**
+ * A live offer's price in whatever currency it was actually listed in, for when it isn't
+ * EUR — Sorare's API does not auto-convert (e.g. a Solana-priced listing has no eurCents at
+ * all), so this lets the UI show the real price instead of falsely claiming there's no offer.
+ */
+export interface MarketOfferAmount {
+  currency: 'GBP' | 'USD' | 'SOL' | 'ETH'
+  value: number
+}
+
 export interface MarketPrices {
   classicEurCents: number | null
   inSeasonEurCents: number | null
-  /** Slug of the specific card the Classic price came from — null unless classicEurCents is set. Links to sorare.com/football/cards/{slug}. */
+  /** Set only when classicEurCents is null but a real offer exists in a different currency. */
+  classicOfferAmount: MarketOfferAmount | null
+  /** Set only when inSeasonEurCents is null but a real offer exists in a different currency. */
+  inSeasonOfferAmount: MarketOfferAmount | null
+  /** Slug of the specific card the Classic price/offer came from — null unless there's an active offer. Links to sorare.com/football/cards/{slug}. */
   classicCardSlug: string | null
-  /** Slug of the specific card the In-Season price came from — null unless inSeasonEurCents is set. */
+  /** Slug of the specific card the In-Season price/offer came from — null unless there's an active offer. */
   inSeasonCardSlug: string | null
   /** Which rarity these prices were fetched for — lets consumers detect stale data after a rarity-filter change. */
   rarity: MarketRarity

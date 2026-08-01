@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatMarketOfferAmount,
   formatMarketPrice,
   formatMarketRarity,
   getAvailabilityWarning,
@@ -28,6 +29,27 @@ describe('formatMarketPrice', () => {
 
   it('shows "kein Angebot" when there is no active offer', () => {
     expect(formatMarketPrice(null)).toBe('kein Angebot')
+  })
+})
+
+describe('formatMarketOfferAmount', () => {
+  const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' })
+  const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+
+  it('formats a SOL amount to 4 decimal places with a unit suffix', () => {
+    expect(formatMarketOfferAmount({ currency: 'SOL', value: 1.32 })).toBe('1.3200 SOL')
+  })
+
+  it('formats an ETH amount to 4 decimal places with a unit suffix', () => {
+    expect(formatMarketOfferAmount({ currency: 'ETH', value: 0.054 })).toBe('0.0540 ETH')
+  })
+
+  it('formats a GBP amount using British currency formatting', () => {
+    expect(formatMarketOfferAmount({ currency: 'GBP', value: 45 })).toBe(gbp.format(45))
+  })
+
+  it('formats a USD amount using US currency formatting', () => {
+    expect(formatMarketOfferAmount({ currency: 'USD', value: 50 })).toBe(usd.format(50))
   })
 })
 

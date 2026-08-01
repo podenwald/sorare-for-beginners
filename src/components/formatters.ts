@@ -1,6 +1,6 @@
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
 import { MARKET_RARITIES } from '../api/sorareClient'
-import type { MarketRarity } from '../api/types'
+import type { MarketOfferAmount, MarketRarity } from '../api/types'
 
 export function formatScore(value: number | null): string {
   return value == null || Number.isNaN(value) ? '–' : String(Math.round(value))
@@ -14,6 +14,24 @@ const EUR_FORMATTER = new Intl.NumberFormat('de-DE', { style: 'currency', curren
 
 export function formatMarketPrice(eurCents: number | null): string {
   return eurCents === null ? 'kein Angebot' : EUR_FORMATTER.format(eurCents / 100)
+}
+
+const GBP_FORMATTER = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' })
+const USD_FORMATTER = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+
+// SOL/ETH have no ISO currency code for Intl.NumberFormat's `currency` option, so they're
+// formatted as plain numbers with a unit suffix instead of going through a currency formatter.
+export function formatMarketOfferAmount(amount: MarketOfferAmount): string {
+  switch (amount.currency) {
+    case 'GBP':
+      return GBP_FORMATTER.format(amount.value)
+    case 'USD':
+      return USD_FORMATTER.format(amount.value)
+    case 'SOL':
+      return `${amount.value.toFixed(4)} SOL`
+    case 'ETH':
+      return `${amount.value.toFixed(4)} ETH`
+  }
 }
 
 export function formatMarketRarity(rarity: MarketRarity): string {

@@ -22,6 +22,8 @@ function buildPlayer(overrides: Partial<Player> = {}): Player {
     marketPrices: {
       classicEurCents: null,
       inSeasonEurCents: null,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
       rarity: 'limited',

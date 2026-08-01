@@ -50,12 +50,21 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
       # Lowest currently-listed sale price for the requested rarity, Classic vs. In-Season.
       # `slug` identifies the specific card the price came from, for linking out to
       # sorare.com/football/cards/{slug} — the actual listing the price is quoting.
+      # An offer's `amounts` only populates the ONE field matching its own referenceCurrency
+      # (Sorare does not auto-convert — e.g. a Solana-priced listing has lamport set and
+      # eurCents/usdCents/gbpCents/wei all null), so all 5 currency fields are requested to
+      # let the client fall back to displaying the offer's native currency when eurCents is null.
       classicPrice: lowestPriceAnyCard(inSeason: false, rarity: $rarity) {
         slug
         liveSingleSaleOffer {
           receiverSide {
             amounts {
               eurCents
+              gbpCents
+              usdCents
+              lamport
+              wei
+              referenceCurrency
             }
           }
         }
@@ -66,6 +75,11 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
           receiverSide {
             amounts {
               eurCents
+              gbpCents
+              usdCents
+              lamport
+              wei
+              referenceCurrency
             }
           }
         }

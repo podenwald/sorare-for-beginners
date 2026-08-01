@@ -188,8 +188,18 @@ describe('getPlayer market prices', () => {
   it('maps a live sale offer on both cards to eurCents values and their card slugs', async () => {
     mockFetchOnce(
       playerDetailResponse(
-        { slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: 5498 } } } },
-        { slug: 'kylian-mbappe-2025-limited-2', liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: 6000 } } } },
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+          },
+        },
+        {
+          slug: 'kylian-mbappe-2025-limited-2',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: 6000, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+          },
+        },
       ),
     )
 
@@ -198,6 +208,8 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({
       classicEurCents: 5498,
       inSeasonEurCents: 6000,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: 'kylian-mbappe-2024-limited-1',
       inSeasonCardSlug: 'kylian-mbappe-2025-limited-2',
       rarity: 'limited',
@@ -217,6 +229,8 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({
       classicEurCents: null,
       inSeasonEurCents: null,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
       rarity: 'limited',
@@ -231,17 +245,126 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({
       classicEurCents: null,
       inSeasonEurCents: null,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
       rarity: 'limited',
     })
   })
 
-  it('maps a live offer with no eurCents value (eurCents: null) to null, including no card slug', async () => {
+  it('maps a live offer priced in Solana (lamport) to a SOL offerAmount when eurCents is null', async () => {
     mockFetchOnce(
       playerDetailResponse(
-        { slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: null } } } },
-        { slug: 'kylian-mbappe-2025-limited-2', liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: null } } } },
+        {
+          slug: 'michael-olise-2025-limited-278',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: '1320000000', wei: null },
+            },
+          },
+        },
+        { slug: 'michael-olise-2025-limited-278', liveSingleSaleOffer: null },
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBeNull()
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'SOL', value: 1.32 })
+    expect(player.marketPrices.classicCardSlug).toBe('michael-olise-2025-limited-278')
+  })
+
+  it('maps a live offer priced in ETH (wei) to an ETH offerAmount when eurCents is null', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: '54000000000000000' },
+            },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'ETH', value: 0.054 })
+  })
+
+  it('maps a live offer priced in GBP to a GBP offerAmount when eurCents is null', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: null, gbpCents: 4500, usdCents: null, lamport: null, wei: null } },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'GBP', value: 45 })
+  })
+
+  it('maps a live offer priced in USD to a USD offerAmount when eurCents is null', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: 5000, lamport: null, wei: null } },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'USD', value: 50 })
+  })
+
+  it('prefers eurCents over a native-currency offerAmount when both happen to be present', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: '1000000000', wei: null } },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBe(5498)
+    expect(player.marketPrices.classicOfferAmount).toBeNull()
+  })
+
+  it('maps a live offer with no eurCents value and no other currency field to null, including no card slug', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+          },
+        },
+        {
+          slug: 'kylian-mbappe-2025-limited-2',
+          liveSingleSaleOffer: {
+            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+          },
+        },
       ),
     )
 
@@ -250,6 +373,8 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({
       classicEurCents: null,
       inSeasonEurCents: null,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
       rarity: 'limited',
@@ -269,6 +394,8 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices).toEqual({
       classicEurCents: null,
       inSeasonEurCents: null,
+      classicOfferAmount: null,
+      inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
       rarity: 'limited',

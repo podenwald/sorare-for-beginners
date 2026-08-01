@@ -1,4 +1,12 @@
-import type { GraphQLError, MarketRarity, Player, PlayerSearchHit, PlayerSearchResult, Position } from './types'
+import type {
+  GraphQLError,
+  MarketOfferAmount,
+  MarketRarity,
+  Player,
+  PlayerSearchHit,
+  PlayerSearchResult,
+  Position,
+} from './types'
 import { SorareApiError } from './types'
 import { getCurrentSeasonStartYear } from './season'
 
@@ -73,20 +81,49 @@ interface PlayerDetailRaw {
   } | null
 }
 
+interface MarketAmountsRaw {
+  eurCents: number | null
+  gbpCents: number | null
+  usdCents: number | null
+  lamport: string | null
+  wei: string | null
+}
+
 interface MarketOfferCardRaw {
   slug: string
-  liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null
+  liveSingleSaleOffer: { receiverSide: { amounts: MarketAmountsRaw } } | null
 }
 
 interface MarketOffer {
-  eurCents: number
+  eurCents: number | null
+  offerAmount: MarketOfferAmount | null
   cardSlug: string
 }
 
+// An offer's `amounts` only has the ONE field populated that matches its own referenceCurrency —
+// Sorare doesn't auto-convert (e.g. a Solana-priced listing has lamport set, everything else
+// null). When eurCents is missing, fall back to whichever native-currency field IS present so
+// the UI can show the real price instead of claiming there's no offer at all.
+function deriveOfferAmount(amounts: MarketAmountsRaw): MarketOfferAmount | null {
+  // Loose `!= null` (not `!==`) deliberately treats a missing field the same as an explicit
+  // null — real GraphQL responses always send an explicit null for an inapplicable currency,
+  // but defensively handling `undefined` too costs nothing and avoids a subtle mismatch.
+  if (amounts.lamport != null) return { currency: 'SOL', value: Number(amounts.lamport) / 1_000_000_000 }
+  if (amounts.wei != null) return { currency: 'ETH', value: Number(amounts.wei) / 1e18 }
+  if (amounts.gbpCents != null) return { currency: 'GBP', value: amounts.gbpCents / 100 }
+  if (amounts.usdCents != null) return { currency: 'USD', value: amounts.usdCents / 100 }
+  return null
+}
+
 function extractMarketOffer(card: MarketOfferCardRaw | null): MarketOffer | null {
-  const eurCents = card?.liveSingleSaleOffer?.receiverSide?.amounts?.eurCents ?? null
-  if (card === null || eurCents === null) return null
-  return { eurCents, cardSlug: card.slug }
+  const amounts = card?.liveSingleSaleOffer?.receiverSide?.amounts
+  if (card === null || !amounts) return null
+
+  const eurCents = amounts.eurCents ?? null
+  const offerAmount = eurCents === null ? deriveOfferAmount(amounts) : null
+  if (eurCents === null && offerAmount === null) return null
+
+  return { eurCents, offerAmount, cardSlug: card.slug }
 }
 
 export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
@@ -133,6 +170,8 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
       return {
         classicEurCents: classicOffer?.eurCents ?? null,
         inSeasonEurCents: inSeasonOffer?.eurCents ?? null,
+        classicOfferAmount: classicOffer?.offerAmount ?? null,
+        inSeasonOfferAmount: inSeasonOffer?.offerAmount ?? null,
         classicCardSlug: classicOffer?.cardSlug ?? null,
         inSeasonCardSlug: inSeasonOffer?.cardSlug ?? null,
         rarity: marketRarity,

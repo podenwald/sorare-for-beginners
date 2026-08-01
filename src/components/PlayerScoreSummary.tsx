@@ -1,6 +1,7 @@
-import type { Player } from '../api/types'
+import type { MarketOfferAmount, Player } from '../api/types'
 import type { EvaluationCategory, PlayerEvaluation } from '../api/scoring'
 import {
+  formatMarketOfferAmount,
   formatMarketPrice,
   formatMarketRarity,
   formatScore,
@@ -23,11 +24,20 @@ function displayCategory(evaluation: PlayerEvaluation): EvaluationCategory {
 
 interface MarketPriceProps {
   eurCents: number | null
+  offerAmount: MarketOfferAmount | null
   cardSlug: string | null
 }
 
-function MarketPrice({ eurCents, cardSlug }: MarketPriceProps) {
-  const formatted = formatMarketPrice(eurCents)
+function MarketPrice({ eurCents, offerAmount, cardSlug }: MarketPriceProps) {
+  let formatted: string
+  if (eurCents !== null) {
+    formatted = formatMarketPrice(eurCents)
+  } else if (offerAmount) {
+    formatted = formatMarketOfferAmount(offerAmount)
+  } else {
+    formatted = formatMarketPrice(null)
+  }
+
   if (!cardSlug) return <>{formatted}</>
   return (
     <a href={getMarketOfferUrl(cardSlug)} target="_blank" rel="noopener noreferrer">
@@ -69,10 +79,15 @@ export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryPro
         <br />
         <small>
           {formatMarketRarity(player.marketPrices.rarity)} · Classic{' '}
-          <MarketPrice eurCents={player.marketPrices.classicEurCents} cardSlug={player.marketPrices.classicCardSlug} />{' '}
+          <MarketPrice
+            eurCents={player.marketPrices.classicEurCents}
+            offerAmount={player.marketPrices.classicOfferAmount}
+            cardSlug={player.marketPrices.classicCardSlug}
+          />{' '}
           · In-Season{' '}
           <MarketPrice
             eurCents={player.marketPrices.inSeasonEurCents}
+            offerAmount={player.marketPrices.inSeasonOfferAmount}
             cardSlug={player.marketPrices.inSeasonCardSlug}
           />
         </small>
