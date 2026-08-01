@@ -19,7 +19,13 @@ function buildPlayer(overrides: Partial<Player> = {}): Player {
     ],
     seasonStats: { appearances: 30, minutesPlayed: 2700, substituteIn: 0, substituteOut: 0 },
     sorareAverageScores: { l5: null, l10: null, l40: null },
-    marketPrices: { classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' },
+    marketPrices: {
+      classicEurCents: null,
+      inSeasonEurCents: null,
+      classicCardSlug: null,
+      inSeasonCardSlug: null,
+      rarity: 'limited',
+    },
     ...overrides,
   }
 }

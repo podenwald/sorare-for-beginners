@@ -68,15 +68,25 @@ interface PlayerDetailRaw {
     l10: number | null
     l40: number | null
     stats: { appearances: number; minutesPlayed: number; substituteIn: number; substituteOut: number } | null
-    classicPrice: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null
-    inSeasonPrice: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null
+    classicPrice: MarketOfferCardRaw | null
+    inSeasonPrice: MarketOfferCardRaw | null
   } | null
 }
 
-function extractOfferPrice(
-  card: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null,
-): number | null {
-  return card?.liveSingleSaleOffer?.receiverSide?.amounts?.eurCents ?? null
+interface MarketOfferCardRaw {
+  slug: string
+  liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null
+}
+
+interface MarketOffer {
+  eurCents: number
+  cardSlug: string
+}
+
+function extractMarketOffer(card: MarketOfferCardRaw | null): MarketOffer | null {
+  const eurCents = card?.liveSingleSaleOffer?.receiverSide?.amounts?.eurCents ?? null
+  if (card === null || eurCents === null) return null
+  return { eurCents, cardSlug: card.slug }
 }
 
 export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
@@ -117,11 +127,17 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
       l10: raw.l10,
       l40: raw.l40,
     },
-    marketPrices: {
-      classicEurCents: extractOfferPrice(raw.classicPrice),
-      inSeasonEurCents: extractOfferPrice(raw.inSeasonPrice),
-      rarity: marketRarity,
-    },
+    marketPrices: (() => {
+      const classicOffer = extractMarketOffer(raw.classicPrice)
+      const inSeasonOffer = extractMarketOffer(raw.inSeasonPrice)
+      return {
+        classicEurCents: classicOffer?.eurCents ?? null,
+        inSeasonEurCents: inSeasonOffer?.eurCents ?? null,
+        classicCardSlug: classicOffer?.cardSlug ?? null,
+        inSeasonCardSlug: inSeasonOffer?.cardSlug ?? null,
+        rarity: marketRarity,
+      }
+    })(),
   }
 }
 

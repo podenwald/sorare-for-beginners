@@ -6,6 +6,7 @@ import {
   formatScore,
   formatSorareAverage,
   getAvailabilityWarning,
+  getMarketOfferUrl,
   getScoreExplanation,
 } from './formatters'
 
@@ -18,6 +19,21 @@ const CATEGORY_ICON: Record<EvaluationCategory, string> = {
 
 function displayCategory(evaluation: PlayerEvaluation): EvaluationCategory {
   return evaluation.scorePotential.category === 'unbekannt' ? 'unbekannt' : evaluation.overall.category
+}
+
+interface MarketPriceProps {
+  eurCents: number | null
+  cardSlug: string | null
+}
+
+function MarketPrice({ eurCents, cardSlug }: MarketPriceProps) {
+  const formatted = formatMarketPrice(eurCents)
+  if (!cardSlug) return <>{formatted}</>
+  return (
+    <a href={getMarketOfferUrl(cardSlug)} target="_blank" rel="noopener noreferrer">
+      {formatted}
+    </a>
+  )
 }
 
 interface PlayerScoreSummaryProps {
@@ -53,8 +69,12 @@ export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryPro
         <br />
         <small>
           {formatMarketRarity(player.marketPrices.rarity)} · Classic{' '}
-          {formatMarketPrice(player.marketPrices.classicEurCents)} · In-Season{' '}
-          {formatMarketPrice(player.marketPrices.inSeasonEurCents)}
+          <MarketPrice eurCents={player.marketPrices.classicEurCents} cardSlug={player.marketPrices.classicCardSlug} />{' '}
+          · In-Season{' '}
+          <MarketPrice
+            eurCents={player.marketPrices.inSeasonEurCents}
+            cardSlug={player.marketPrices.inSeasonCardSlug}
+          />
         </small>
       </span>
     </span>

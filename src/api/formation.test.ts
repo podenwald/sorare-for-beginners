@@ -38,7 +38,13 @@ function buildCandidate(
       recentSo5Scores: [],
       seasonStats: null,
       sorareAverageScores: { l5: null, l10: null, l40: null },
-      marketPrices: { classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' },
+      marketPrices: {
+        classicEurCents: null,
+        inSeasonEurCents: null,
+        classicCardSlug: null,
+        inSeasonCardSlug: null,
+        rarity: 'limited',
+      },
     },
     evaluation,
   }

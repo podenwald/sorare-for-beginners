@@ -47,8 +47,11 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
         substituteIn
         substituteOut
       }
-      # Lowest currently-listed sale price for the requested rarity, Classic vs. In-Season
+      # Lowest currently-listed sale price for the requested rarity, Classic vs. In-Season.
+      # `slug` identifies the specific card the price came from, for linking out to
+      # sorare.com/football/cards/{slug} — the actual listing the price is quoting.
       classicPrice: lowestPriceAnyCard(inSeason: false, rarity: $rarity) {
+        slug
         liveSingleSaleOffer {
           receiverSide {
             amounts {
@@ -58,6 +61,7 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
         }
       }
       inSeasonPrice: lowestPriceAnyCard(inSeason: true, rarity: $rarity) {
+        slug
         liveSingleSaleOffer {
           receiverSide {
             amounts {

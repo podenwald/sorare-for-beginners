@@ -20,6 +20,10 @@ export function formatMarketRarity(rarity: MarketRarity): string {
   return MARKET_RARITIES.find((entry) => entry.value === rarity)?.label ?? rarity
 }
 
+export function getMarketOfferUrl(cardSlug: string): string {
+  return `https://sorare.com/football/cards/${cardSlug}`
+}
+
 function formatExpectedReturn(expectedReturn: string | null, isOverdue: boolean): string {
   if (!expectedReturn) return 'Rückkehr unbekannt'
   const formatted = new Date(expectedReturn).toLocaleDateString('de-DE')

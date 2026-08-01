@@ -42,6 +42,10 @@ export type MarketRarity = 'limited' | 'rare' | 'super_rare' | 'unique'
 export interface MarketPrices {
   classicEurCents: number | null
   inSeasonEurCents: number | null
+  /** Slug of the specific card the Classic price came from — null unless classicEurCents is set. Links to sorare.com/football/cards/{slug}. */
+  classicCardSlug: string | null
+  /** Slug of the specific card the In-Season price came from — null unless inSeasonEurCents is set. */
+  inSeasonCardSlug: string | null
   /** Which rarity these prices were fetched for — lets consumers detect stale data after a rarity-filter change. */
   rarity: MarketRarity
 }

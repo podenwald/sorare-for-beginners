@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatMarketPrice, formatMarketRarity, getAvailabilityWarning, getScoreExplanation } from './formatters'
+import {
+  formatMarketPrice,
+  formatMarketRarity,
+  getAvailabilityWarning,
+  getMarketOfferUrl,
+  getScoreExplanation,
+} from './formatters'
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
 
 const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
@@ -22,6 +28,14 @@ describe('formatMarketPrice', () => {
 
   it('shows "kein Angebot" when there is no active offer', () => {
     expect(formatMarketPrice(null)).toBe('kein Angebot')
+  })
+})
+
+describe('getMarketOfferUrl', () => {
+  it('builds the sorare.com card page URL for a given card slug', () => {
+    expect(getMarketOfferUrl('harry-kane-2024-limited-694')).toBe(
+      'https://sorare.com/football/cards/harry-kane-2024-limited-694',
+    )
   })
 })
 
