@@ -55,7 +55,11 @@ export function PlayerSearch({ onAdd, label, marketRarity }: PlayerSearchProps) 
     const stale = results
       .map((hit) => resultDetails[hit.slug])
       .filter((player): player is Player => player !== undefined && player.marketPrices.rarity !== marketRarity)
-    if (stale.length === 0) return
+    if (stale.length === 0) {
+      setIsRefreshingPrices(false)
+      setPriceRefreshError(null)
+      return
+    }
     let cancelled = false
     setIsRefreshingPrices(true)
     setPriceRefreshError(null)

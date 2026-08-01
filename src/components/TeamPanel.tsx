@@ -70,7 +70,11 @@ export function TeamPanel({ label }: TeamPanelProps) {
   // mismatch and corrects it, regardless of which flow added them.
   useEffect(() => {
     const stale = shortlist.filter((player) => player.marketPrices.rarity !== marketRarity)
-    if (stale.length === 0) return
+    if (stale.length === 0) {
+      setIsRefreshingPrices(false)
+      setPriceRefreshError(null)
+      return
+    }
     let cancelled = false
     setIsRefreshingPrices(true)
     setPriceRefreshError(null)
@@ -82,7 +86,12 @@ export function TeamPanel({ label }: TeamPanelProps) {
             outcome.status === 'fulfilled' ? [[stale[index].slug, outcome.value] as const] : [],
           ),
         )
-        setShortlist((prev) => prev.map((player) => refreshed.get(player.slug) ?? player))
+        // Only touch shortlist when something actually changed — updating it unconditionally
+        // would create a new array identity every time, re-triggering this effect and refetching
+        // the same still-failing players forever whenever a refetch rejects.
+        if (refreshed.size > 0) {
+          setShortlist((prev) => prev.map((player) => refreshed.get(player.slug) ?? player))
+        }
         if (settled.some((outcome) => outcome.status === 'rejected')) {
           setPriceRefreshError('Einige Preise konnten nicht aktualisiert werden')
         }
