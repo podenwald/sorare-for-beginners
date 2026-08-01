@@ -58,7 +58,9 @@ export function assignFormation(
 ): FormationSlot[] {
   let remaining =
     mode === 'teamStack'
-      ? candidates.filter((candidate) => candidate.player.activeClub?.slug === stackClubSlug)
+      ? stackClubSlug
+        ? candidates.filter((candidate) => candidate.player.activeClub?.slug === stackClubSlug)
+        : []
       : candidates.slice()
   const slots: FormationSlot[] = []
 

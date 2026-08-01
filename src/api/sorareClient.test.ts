@@ -191,13 +191,17 @@ describe('getPlayer market prices', () => {
         {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
           },
         },
         {
           slug: 'kylian-mbappe-2025-limited-2',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: 6000, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: { eurCents: 6000, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
           },
         },
       ),
@@ -260,7 +264,14 @@ describe('getPlayer market prices', () => {
           slug: 'michael-olise-2025-limited-278',
           liveSingleSaleOffer: {
             receiverSide: {
-              amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: '1320000000', wei: null },
+              amounts: {
+                eurCents: null,
+                gbpCents: null,
+                usdCents: null,
+                lamport: '1320000000',
+                wei: null,
+                referenceCurrency: 'LAMPORT',
+              },
             },
           },
         },
@@ -282,7 +293,14 @@ describe('getPlayer market prices', () => {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
             receiverSide: {
-              amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: '54000000000000000' },
+              amounts: {
+                eurCents: null,
+                gbpCents: null,
+                usdCents: null,
+                lamport: null,
+                wei: '54000000000000000',
+                referenceCurrency: 'WEI',
+              },
             },
           },
         },
@@ -301,7 +319,9 @@ describe('getPlayer market prices', () => {
         {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: null, gbpCents: 4500, usdCents: null, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: { eurCents: null, gbpCents: 4500, usdCents: null, lamport: null, wei: null, referenceCurrency: 'GBP' },
+            },
           },
         },
         null,
@@ -319,7 +339,9 @@ describe('getPlayer market prices', () => {
         {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: 5000, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: { eurCents: null, gbpCents: null, usdCents: 5000, lamport: null, wei: null, referenceCurrency: 'USD' },
+            },
           },
         },
         null,
@@ -337,7 +359,16 @@ describe('getPlayer market prices', () => {
         {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: '1000000000', wei: null } },
+            receiverSide: {
+              amounts: {
+                eurCents: 5498,
+                gbpCents: null,
+                usdCents: null,
+                lamport: '1000000000',
+                wei: null,
+                referenceCurrency: 'EUR',
+              },
+            },
           },
         },
         null,
@@ -350,19 +381,67 @@ describe('getPlayer market prices', () => {
     expect(player.marketPrices.classicOfferAmount).toBeNull()
   })
 
+  it('trusts referenceCurrency over field presence when a stray, non-matching field is also populated', async () => {
+    // referenceCurrency says GBP, but `wei` (belonging to a different currency) is also non-null —
+    // a legacy/inconsistent-looking response that should never happen in practice, but proves the
+    // fix genuinely switches on referenceCurrency rather than just checking "which field is set".
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: {
+                eurCents: null,
+                gbpCents: 4500,
+                usdCents: null,
+                lamport: null,
+                wei: '23000000000000000',
+                referenceCurrency: 'GBP',
+              },
+            },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'GBP', value: 45 })
+  })
+
   it('maps a live offer with no eurCents value and no other currency field to null, including no card slug', async () => {
     mockFetchOnce(
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: {
+                eurCents: null,
+                gbpCents: null,
+                usdCents: null,
+                lamport: null,
+                wei: null,
+                referenceCurrency: 'EUR',
+              },
+            },
           },
         },
         {
           slug: 'kylian-mbappe-2025-limited-2',
           liveSingleSaleOffer: {
-            receiverSide: { amounts: { eurCents: null, gbpCents: null, usdCents: null, lamport: null, wei: null } },
+            receiverSide: {
+              amounts: {
+                eurCents: null,
+                gbpCents: null,
+                usdCents: null,
+                lamport: null,
+                wei: null,
+                referenceCurrency: 'EUR',
+              },
+            },
           },
         },
       ),
@@ -736,6 +815,11 @@ describe('getLeagueClubs', () => {
 
     const clubs = await getLeagueClubs('bundesliga-de')
 
+    expect(fetch).toHaveBeenCalledWith('/api/sorare-proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation: 'leagueClubs', variables: { leagueSlug: 'bundesliga-de' } }),
+    })
     expect(clubs).toEqual([{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }])
   })
 
@@ -832,6 +916,11 @@ describe('getClubRoster', () => {
 
     const hits = await getClubRoster('club-a')
 
+    expect(fetch).toHaveBeenCalledWith('/api/sorare-proxy.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation: 'clubPlayers', variables: { clubSlug: 'club-a' } }),
+    })
     expect(hits).toEqual([
       { slug: 'a-player', displayName: 'A Player', positions: ['Midfielder'], clubName: 'Club A' },
     ])

@@ -81,12 +81,15 @@ interface PlayerDetailRaw {
   } | null
 }
 
+type SorareOfferCurrency = 'EUR' | 'GBP' | 'USD' | 'LAMPORT' | 'WEI'
+
 interface MarketAmountsRaw {
   eurCents: number | null
   gbpCents: number | null
   usdCents: number | null
   lamport: string | null
   wei: string | null
+  referenceCurrency: SorareOfferCurrency
 }
 
 interface MarketOfferCardRaw {
@@ -102,17 +105,22 @@ interface MarketOffer {
 
 // An offer's `amounts` only has the ONE field populated that matches its own referenceCurrency —
 // Sorare doesn't auto-convert (e.g. a Solana-priced listing has lamport set, everything else
-// null). When eurCents is missing, fall back to whichever native-currency field IS present so
-// the UI can show the real price instead of claiming there's no offer at all.
+// null). Switching on `referenceCurrency` itself (rather than just checking which field happens
+// to be non-null) is deliberate: it's the authoritative signal for which field to trust, so a
+// listing that ever carries more than one populated field can't pick the wrong one.
 function deriveOfferAmount(amounts: MarketAmountsRaw): MarketOfferAmount | null {
-  // Loose `!= null` (not `!==`) deliberately treats a missing field the same as an explicit
-  // null — real GraphQL responses always send an explicit null for an inapplicable currency,
-  // but defensively handling `undefined` too costs nothing and avoids a subtle mismatch.
-  if (amounts.lamport != null) return { currency: 'SOL', value: Number(amounts.lamport) / 1_000_000_000 }
-  if (amounts.wei != null) return { currency: 'ETH', value: Number(amounts.wei) / 1e18 }
-  if (amounts.gbpCents != null) return { currency: 'GBP', value: amounts.gbpCents / 100 }
-  if (amounts.usdCents != null) return { currency: 'USD', value: amounts.usdCents / 100 }
-  return null
+  switch (amounts.referenceCurrency) {
+    case 'LAMPORT':
+      return amounts.lamport == null ? null : { currency: 'SOL', value: Number(amounts.lamport) / 1_000_000_000 }
+    case 'WEI':
+      return amounts.wei == null ? null : { currency: 'ETH', value: Number(amounts.wei) / 1e18 }
+    case 'GBP':
+      return amounts.gbpCents == null ? null : { currency: 'GBP', value: amounts.gbpCents / 100 }
+    case 'USD':
+      return amounts.usdCents == null ? null : { currency: 'USD', value: amounts.usdCents / 100 }
+    case 'EUR':
+      return null
+  }
 }
 
 function extractMarketOffer(card: MarketOfferCardRaw | null): MarketOffer | null {

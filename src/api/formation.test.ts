@@ -250,4 +250,16 @@ describe('assignFormation', () => {
 
     expect(slots.every((slot) => slot.candidate === null)).toBe(true)
   })
+
+  it('in teamStack mode, does not match a clubless candidate when stackClubSlug is undefined', () => {
+    // Regression guard: `candidate.player.activeClub?.slug === stackClubSlug` would be
+    // `undefined === undefined` (true) for a clubless candidate compared against an undefined
+    // stackClubSlug, incorrectly including them. Uses the default `activeClubSlug: null` (no 5th
+    // argument), unlike the sibling test above which gives its candidate a club.
+    const candidates = [buildCandidate('unattached', 'Goalkeeper', 60)]
+
+    const slots = assignFormation(candidates, 'teamStack', undefined)
+
+    expect(slots.every((slot) => slot.candidate === null)).toBe(true)
+  })
 })
