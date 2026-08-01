@@ -6,7 +6,7 @@ const SORARE_ENDPOINT = 'https://api.sorare.com/graphql';
 
 const WHITELIST = [
     'playerDetail' => <<<'GRAPHQL'
-query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity!) {
+query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = limited) {
   anyPlayer(slug: $slug) {
     ... on Player {
       slug

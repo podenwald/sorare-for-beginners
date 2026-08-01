@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getPlayer, searchPlayers } from '../api/sorareClient'
 import { evaluatePlayer } from '../api/scoring'
@@ -20,9 +20,9 @@ export function PlayerSearch({ onAdd, label, marketRarity }: PlayerSearchProps) 
   const [searchError, setSearchError] = useState<string | null>(null)
   const [addingSlug, setAddingSlug] = useState<string | null>(null)
   const [addError, setAddError] = useState<string | null>(null)
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false)
+  const [priceRefreshError, setPriceRefreshError] = useState<string | null>(null)
   const [now] = useState(() => new Date())
-  const resultsRef = useRef(results)
-  resultsRef.current = results
 
   async function handleSearch(event: FormEvent) {
     event.preventDefault()
@@ -46,28 +46,48 @@ export function PlayerSearch({ onAdd, label, marketRarity }: PlayerSearchProps) 
     }
   }
 
-  // Re-fetches already-shown results so their Classic/In-Season prices reflect the newly picked rarity.
+  // Self-healing price refresh: re-fetches any already-loaded result whose prices were fetched
+  // under a different rarity than the one currently selected, merging fixed entries back in
+  // rather than replacing the whole map — a failed refetch must not make an already-loaded
+  // result disappear. Because `resultDetails` is a dependency, this also catches a `handleSearch`
+  // that resolved with a since-superseded rarity (its own fetch has no cancellation guard).
   useEffect(() => {
-    const currentResults = resultsRef.current
-    if (currentResults.length === 0) return
+    const stale = results
+      .map((hit) => resultDetails[hit.slug])
+      .filter((player): player is Player => player !== undefined && player.marketPrices.rarity !== marketRarity)
+    if (stale.length === 0) return
     let cancelled = false
-    Promise.allSettled(currentResults.map((hit) => getPlayer(hit.slug, marketRarity))).then((settled) => {
-      if (cancelled) return
-      const details = Object.fromEntries(
-        settled.flatMap((outcome) => (outcome.status === 'fulfilled' ? [[outcome.value.slug, outcome.value]] : [])),
-      )
-      setResultDetails(details)
-    })
+    setIsRefreshingPrices(true)
+    setPriceRefreshError(null)
+    Promise.allSettled(stale.map((player) => getPlayer(player.slug, marketRarity)))
+      .then((settled) => {
+        if (cancelled) return
+        const refreshed = new Map(
+          settled.flatMap((outcome, index) =>
+            outcome.status === 'fulfilled' ? [[stale[index].slug, outcome.value] as const] : [],
+          ),
+        )
+        if (refreshed.size > 0) {
+          setResultDetails((prev) => ({ ...prev, ...Object.fromEntries(refreshed) }))
+        }
+        if (settled.some((outcome) => outcome.status === 'rejected')) {
+          setPriceRefreshError('Einige Preise konnten nicht aktualisiert werden')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsRefreshingPrices(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [marketRarity])
+  }, [marketRarity, results, resultDetails])
 
   async function handleAdd(slug: string) {
     setAddingSlug(slug)
     setAddError(null)
     try {
-      const player = resultDetails[slug] ?? (await getPlayer(slug, marketRarity))
+      const cached = resultDetails[slug]
+      const player = cached && cached.marketPrices.rarity === marketRarity ? cached : await getPlayer(slug, marketRarity)
       onAdd(player)
     } catch (error) {
       setAddError(error instanceof SorareApiError ? error.message : 'Unbekannter Fehler beim Hinzufügen')
@@ -99,6 +119,12 @@ export function PlayerSearch({ onAdd, label, marketRarity }: PlayerSearchProps) 
       {addError && (
         <p className="search-error" role="alert">
           {addError}
+        </p>
+      )}
+      {isRefreshingPrices && <p className="price-refresh-status">Preise werden aktualisiert…</p>}
+      {priceRefreshError && (
+        <p className="search-error" role="alert">
+          {priceRefreshError}
         </p>
       )}
 

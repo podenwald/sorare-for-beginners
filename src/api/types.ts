@@ -37,12 +37,14 @@ export interface SorareAverageScores {
   l40: number | null
 }
 
+export type MarketRarity = 'limited' | 'rare' | 'super_rare' | 'unique'
+
 export interface MarketPrices {
   classicEurCents: number | null
   inSeasonEurCents: number | null
+  /** Which rarity these prices were fetched for — lets consumers detect stale data after a rarity-filter change. */
+  rarity: MarketRarity
 }
-
-export type MarketRarity = 'limited' | 'rare' | 'super_rare' | 'unique'
 
 export interface Player {
   slug: string

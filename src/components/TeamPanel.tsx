@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
@@ -38,8 +38,8 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [stackError, setStackError] = useState<string | null>(null)
   const [now] = useState(() => new Date())
   const [marketRarity, setMarketRarity] = useState<MarketRarity>('limited')
-  const shortlistRef = useRef(shortlist)
-  shortlistRef.current = shortlist
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false)
+  const [priceRefreshError, setPriceRefreshError] = useState<string | null>(null)
 
   useEffect(() => {
     if (mode !== 'teamStack') return
@@ -63,25 +63,37 @@ export function TeamPanel({ label }: TeamPanelProps) {
     }
   }, [mode, stackLeague])
 
-  // Re-fetches already-shortlisted players so their Classic/In-Season prices reflect the newly picked rarity.
+  // Self-healing price refresh: re-fetches any shortlisted player whose prices were fetched
+  // under a different rarity than the one currently selected. Since `shortlist` is a
+  // dependency, this also catches players added via search/KI-Team/Team-Stack while a rarity
+  // change was still in flight — adding them re-triggers this effect, which then notices the
+  // mismatch and corrects it, regardless of which flow added them.
   useEffect(() => {
-    const current = shortlistRef.current
-    if (current.length === 0) return
+    const stale = shortlist.filter((player) => player.marketPrices.rarity !== marketRarity)
+    if (stale.length === 0) return
     let cancelled = false
-    Promise.allSettled(current.map((player) => getPlayer(player.slug, marketRarity))).then((settled) => {
-      if (cancelled) return
-      setShortlist((prev) =>
-        prev.map((player) => {
-          const index = current.findIndex((p) => p.slug === player.slug)
-          const outcome = index >= 0 ? settled[index] : undefined
-          return outcome?.status === 'fulfilled' ? outcome.value : player
-        }),
-      )
-    })
+    setIsRefreshingPrices(true)
+    setPriceRefreshError(null)
+    Promise.allSettled(stale.map((player) => getPlayer(player.slug, marketRarity)))
+      .then((settled) => {
+        if (cancelled) return
+        const refreshed = new Map(
+          settled.flatMap((outcome, index) =>
+            outcome.status === 'fulfilled' ? [[stale[index].slug, outcome.value] as const] : [],
+          ),
+        )
+        setShortlist((prev) => prev.map((player) => refreshed.get(player.slug) ?? player))
+        if (settled.some((outcome) => outcome.status === 'rejected')) {
+          setPriceRefreshError('Einige Preise konnten nicht aktualisiert werden')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsRefreshingPrices(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [marketRarity])
+  }, [marketRarity, shortlist])
 
   function handleAdd(player: Player): boolean {
     let added = false
@@ -180,11 +192,11 @@ export function TeamPanel({ label }: TeamPanelProps) {
 
       <div className="market-rarity">
         <label>
-          Marktpreis-Rarity:{' '}
+          Marktpreis-Rarität:{' '}
           <select
             value={marketRarity}
             onChange={(event) => setMarketRarity(event.target.value as MarketRarity)}
-            aria-label={`${label} — Marktpreis-Rarity`}
+            aria-label={`${label} — Marktpreis-Rarität`}
           >
             {MARKET_RARITIES.map((rarity) => (
               <option key={rarity.value} value={rarity.value}>
@@ -193,6 +205,12 @@ export function TeamPanel({ label }: TeamPanelProps) {
             ))}
           </select>
         </label>
+        {isRefreshingPrices && <span className="price-refresh-status">Preise werden aktualisiert…</span>}
+        {priceRefreshError && (
+          <p className="search-error" role="alert">
+            {priceRefreshError}
+          </p>
+        )}
       </div>
 
       <PlayerSearch onAdd={handleAdd} label={label} marketRarity={marketRarity} />

@@ -195,7 +195,7 @@ describe('getPlayer market prices', () => {
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
-    expect(player.marketPrices).toEqual({ classicEurCents: 5498, inSeasonEurCents: 6000 })
+    expect(player.marketPrices).toEqual({ classicEurCents: 5498, inSeasonEurCents: 6000, rarity: 'limited' })
   })
 
   it('maps a card with no active offer (liveSingleSaleOffer: null) to null', async () => {
@@ -205,7 +205,7 @@ describe('getPlayer market prices', () => {
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
-    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' })
   })
 
   it('maps no matching card at all (classicPrice/inSeasonPrice: null) to null', async () => {
@@ -213,7 +213,7 @@ describe('getPlayer market prices', () => {
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
-    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' })
   })
 
   it('maps a live offer with no eurCents value (eurCents: null) to null', async () => {
@@ -226,7 +226,25 @@ describe('getPlayer market prices', () => {
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
-    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null })
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' })
+  })
+
+  it('maps an offer whose receiverSide is missing entirely to null (defensive against a partial response)', async () => {
+    mockFetchOnce(
+      playerDetailResponse({ liveSingleSaleOffer: {} }, { liveSingleSaleOffer: {} }),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices).toEqual({ classicEurCents: null, inSeasonEurCents: null, rarity: 'limited' })
+  })
+
+  it('stamps the resulting marketPrices with the rarity the prices were fetched for', async () => {
+    mockFetchOnce(playerDetailResponse(null, null))
+
+    const player = await getPlayer('kylian-mbappe-lottin', 'super_rare')
+
+    expect(player.marketPrices.rarity).toBe('super_rare')
   })
 
   it('passes the requested rarity as the rarity variable, defaulting to limited', async () => {

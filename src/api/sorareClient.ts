@@ -76,7 +76,7 @@ interface PlayerDetailRaw {
 function extractOfferPrice(
   card: { liveSingleSaleOffer: { receiverSide: { amounts: { eurCents: number | null } } } | null } | null,
 ): number | null {
-  return card?.liveSingleSaleOffer?.receiverSide.amounts.eurCents ?? null
+  return card?.liveSingleSaleOffer?.receiverSide?.amounts?.eurCents ?? null
 }
 
 export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
@@ -120,6 +120,7 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
     marketPrices: {
       classicEurCents: extractOfferPrice(raw.classicPrice),
       inSeasonEurCents: extractOfferPrice(raw.inSeasonPrice),
+      rarity: marketRarity,
     },
   }
 }

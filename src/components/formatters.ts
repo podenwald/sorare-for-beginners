@@ -1,4 +1,6 @@
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
+import { MARKET_RARITIES } from '../api/sorareClient'
+import type { MarketRarity } from '../api/types'
 
 export function formatScore(value: number | null): string {
   return value == null || Number.isNaN(value) ? '–' : String(Math.round(value))
@@ -8,8 +10,14 @@ export function formatSorareAverage(value: number | null): string {
   return value === null || value === 0 ? '–' : formatScore(value)
 }
 
+const EUR_FORMATTER = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
+
 export function formatMarketPrice(eurCents: number | null): string {
-  return eurCents === null ? 'kein Angebot' : `${(eurCents / 100).toFixed(2)} €`
+  return eurCents === null ? 'kein Angebot' : EUR_FORMATTER.format(eurCents / 100)
+}
+
+export function formatMarketRarity(rarity: MarketRarity): string {
+  return MARKET_RARITIES.find((entry) => entry.value === rarity)?.label ?? rarity
 }
 
 function formatExpectedReturn(expectedReturn: string | null, isOverdue: boolean): string {
