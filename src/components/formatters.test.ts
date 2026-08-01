@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest'
-import { getAvailabilityWarning, getScoreExplanation } from './formatters'
+import { formatMarketPrice, getAvailabilityWarning, getScoreExplanation } from './formatters'
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
+
+describe('formatMarketPrice', () => {
+  it('formats eurCents as a euro amount with 2 decimal places', () => {
+    expect(formatMarketPrice(5498)).toBe('54.98 €')
+  })
+
+  it('formats a price under 1 euro correctly', () => {
+    expect(formatMarketPrice(49)).toBe('0.49 €')
+  })
+
+  it('formats a zero-cent price as 0.00 €, not as "no offer"', () => {
+    // Sorare has never been observed returning 0 for "no listing" (it consistently uses null,
+    // unlike the l5/l10/l40 averageScore fields — see ODI-301). If this ever changes, this test
+    // will fail and surface the mismatch rather than silently misreporting a real free listing.
+    expect(formatMarketPrice(0)).toBe('0.00 €')
+  })
+
+  it('shows "kein Angebot" when there is no active offer', () => {
+    expect(formatMarketPrice(null)).toBe('kein Angebot')
+  })
+})
 
 function buildIssue(overrides: Partial<AvailabilityIssue> = {}): AvailabilityIssue {
   return {
