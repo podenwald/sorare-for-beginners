@@ -122,24 +122,28 @@ function computeFormation(
     })
   }
 
-  // Final resolution: anyone not yet assigned a slot. Prefer their own-position loss (more
-  // specific and directly relevant) over a Flex-related reason — losing your natural position
-  // is the more useful thing to tell someone than "also not eligible for Flex".
+  // Final resolution: anyone not yet assigned a slot. Prefer the Flex outcome over an own-position
+  // loss when the candidate actually got a Flex chance — that's the FINAL reason they didn't make
+  // the team (a second chance they also lost), more relevant than the earlier, first loss (their
+  // own position) that the Flex chance already superseded. Own-position loss is only the answer
+  // for someone who was never Flex-eligible in the first place (no second chance to lose).
   for (const candidate of remaining) {
     if (explanations.has(candidate.player.slug)) continue // already the Flex winner
+    if (FLEX_ELIGIBLE[mode](candidate)) {
+      explanations.set(candidate.player.slug, {
+        assignedSlot: null,
+        runnerUp: null,
+        beatenBy: flexWinner,
+        ineligibleReason: null,
+      })
+      continue
+    }
     const lostPosition = positionLoss.get(candidate.player.slug)
     if (lostPosition) {
       explanations.set(candidate.player.slug, {
         assignedSlot: null,
         runnerUp: null,
         beatenBy: lostPosition,
-        ineligibleReason: null,
-      })
-    } else if (FLEX_ELIGIBLE[mode](candidate)) {
-      explanations.set(candidate.player.slug, {
-        assignedSlot: null,
-        runnerUp: null,
-        beatenBy: flexWinner,
         ineligibleReason: null,
       })
     } else {
@@ -152,10 +156,9 @@ function computeFormation(
     }
   }
 
-  // flexIneligible candidates whose own exact position they DID win are already in `explanations`
-  // (set in the position loop) and skipped by the `remaining` loop above (they were removed from
-  // `remaining`). Anyone left in flexIneligible who reaches here lost their own position AND isn't
-  // Flex-eligible — already handled by the `lostPosition` branch above, so nothing further to do.
+  // `flexIneligible` is exactly the `remaining` candidates for whom `FLEX_ELIGIBLE[mode]` is
+  // false — handled by the `lostPosition`/`ineligibleReason` branches above. The set itself is
+  // only needed to compute `flexEligible`/`rankedFlex`, nothing further to do with it here.
   void flexIneligible
 
   return { slots, explanations }

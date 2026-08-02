@@ -317,7 +317,7 @@ describe('explainCandidates', () => {
     })
   })
 
-  it('attributes beatenBy to the own-position winner, not the Flex winner, even when the candidate also lost Flex', () => {
+  it('attributes beatenBy to the Flex winner, not the own-position winner, when the candidate got a Flex chance', () => {
     const candidates = [
       buildCandidate('gk-1', 'Goalkeeper', 60),
       buildCandidate('def-1', 'Defender', 70),
@@ -329,13 +329,14 @@ describe('explainCandidates', () => {
 
     const explanations = explainCandidates(candidates)
 
-    // def-2 loses Defender to def-1, then ALSO loses Flex to mid-2 (75 beats 50 among the
-    // leftover non-GKs). Per the documented precedence (own-position loss is the more
-    // specific/useful reason), beatenBy stays def-1 — it is never overwritten by the Flex result.
+    // def-2 loses Defender to def-1, but gets a second chance at Flex — where it also loses, to
+    // mid-2 (75 beats 50 among the leftover non-GKs). The Flex result is the FINAL, more relevant
+    // reason def-2 isn't on the team, so beatenBy is mid-2, not def-1 (whose loss was superseded
+    // by def-2 actually reaching and losing the Flex race).
     expect(explanations.get('def-2')).toEqual({
       assignedSlot: null,
       runnerUp: null,
-      beatenBy: candidates.find((c) => c.player.slug === 'def-1'),
+      beatenBy: candidates.find((c) => c.player.slug === 'mid-2'),
       ineligibleReason: null,
     })
   })
