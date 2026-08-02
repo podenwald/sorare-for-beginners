@@ -1,26 +1,14 @@
-import { explainCandidates } from '../api/formation'
-import type { EvaluatedCandidate, FormationMode, FormationSlot } from '../api/formation'
-import { formatScore, formatSlotOutcome } from './formatters'
+import type { CandidateExplanation, FormationSlot } from '../api/formation'
+import { formatScore, formatSlotLabel, formatSlotOutcome } from './formatters'
 import { PlayerScoreSummary } from './PlayerScoreSummary'
 
 interface FormationListProps {
   slots: FormationSlot[]
-  candidates: EvaluatedCandidate[]
-  mode: FormationMode
-  stackClubSlug?: string
+  explanations: Map<string, CandidateExplanation>
 }
 
-const SLOT_LABEL_TEXT: Record<FormationSlot['label'], string> = {
-  Goalkeeper: 'Torwart',
-  Defender: 'Verteidiger',
-  Midfielder: 'Mittelfeld',
-  Forward: 'Sturm',
-  Flex: 'Flex',
-}
-
-export function FormationList({ slots, candidates, mode, stackClubSlug }: FormationListProps) {
+export function FormationList({ slots, explanations }: FormationListProps) {
   const l10Sum = slots.reduce((sum, slot) => sum + (slot.candidate?.player.sorareAverageScores.l10 ?? 0), 0)
-  const explanations = explainCandidates(candidates, mode, stackClubSlug)
 
   return (
     <ul className="formation-list">
@@ -28,7 +16,7 @@ export function FormationList({ slots, candidates, mode, stackClubSlug }: Format
         const explanation = slot.candidate ? explanations.get(slot.candidate.player.slug) : undefined
         return (
           <li key={slot.label} className="formation-slot">
-            <span className="formation-slot-label">{SLOT_LABEL_TEXT[slot.label]}</span>
+            <span className="formation-slot-label">{formatSlotLabel(slot.label)}</span>
             {slot.candidate ? (
               <span className="formation-slot-candidate">
                 <PlayerScoreSummary player={slot.candidate.player} evaluation={slot.candidate.evaluation} />
@@ -39,7 +27,7 @@ export function FormationList({ slots, candidates, mode, stackClubSlug }: Format
                 )}
               </span>
             ) : (
-              <span className="formation-slot-empty">{SLOT_LABEL_TEXT[slot.label]} hinzufügen</span>
+              <span className="formation-slot-empty">{formatSlotLabel(slot.label)} hinzufügen</span>
             )}
           </li>
         )

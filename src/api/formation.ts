@@ -52,21 +52,30 @@ export interface CandidateExplanation {
   assignedSlot: FormationSlotLabel | null
   runnerUp: EvaluatedCandidate | null
   beatenBy: EvaluatedCandidate | null
+  // Which slot `beatenBy` won, so a display string can say "beaten for Flex" rather than leaving
+  // the slot unstated — relevant in particular for a candidate who lost their own position AND
+  // then also lost Flex, where `beatenBy` is the Flex winner, not the own-position winner.
+  beatenForSlot: FormationSlotLabel | null
   ineligibleReason: string | null
 }
 
-interface FormationComputation {
+export interface FormationComputation {
   slots: FormationSlot[]
   explanations: Map<string, CandidateExplanation>
 }
 
-function computeFormation(
+/**
+ * Computes both the formation slots AND the per-candidate explanation of why they did or didn't
+ * make it, in one pass — the single source of truth `assignFormation`/`explainCandidates` (and
+ * any caller needing both) delegate to, so the two views can never disagree about who won what.
+ */
+export function computeFormationView(
   candidates: EvaluatedCandidate[],
-  mode: FormationMode,
-  stackClubSlug: string | undefined,
+  mode: FormationMode = 'normal',
+  stackClubSlug?: string,
 ): FormationComputation {
   const explanations = new Map<string, CandidateExplanation>()
-  const positionLoss = new Map<string, EvaluatedCandidate>()
+  const positionLoss = new Map<string, { winner: EvaluatedCandidate; label: FormationSlotLabel }>()
 
   if (mode === 'teamStack') {
     for (const candidate of candidates) {
@@ -75,6 +84,7 @@ function computeFormation(
           assignedSlot: null,
           runnerUp: null,
           beatenBy: null,
+          beatenForSlot: null,
           ineligibleReason: stackClubSlug
             ? 'Nicht im ausgewählten Team-Stack-Verein'
             : 'Noch kein Team-Stack-Verein ausgewählt',
@@ -99,9 +109,15 @@ function computeFormation(
     const runnerUp = ranked[1] ?? null
     slots.push({ label, candidate: winner })
     if (winner) {
-      explanations.set(winner.player.slug, { assignedSlot: label, runnerUp, beatenBy: null, ineligibleReason: null })
+      explanations.set(winner.player.slug, {
+        assignedSlot: label,
+        runnerUp,
+        beatenBy: null,
+        beatenForSlot: null,
+        ineligibleReason: null,
+      })
       for (const loser of ranked.slice(1)) {
-        positionLoss.set(loser.player.slug, winner)
+        positionLoss.set(loser.player.slug, { winner, label })
       }
       remaining = remaining.filter((candidate) => candidate !== winner)
     }
@@ -117,6 +133,7 @@ function computeFormation(
       assignedSlot: 'Flex',
       runnerUp: flexRunnerUp,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     })
   }
@@ -133,6 +150,7 @@ function computeFormation(
         assignedSlot: null,
         runnerUp: null,
         beatenBy: flexWinner,
+        beatenForSlot: flexWinner ? 'Flex' : null,
         ineligibleReason: null,
       })
       continue
@@ -142,7 +160,8 @@ function computeFormation(
       explanations.set(candidate.player.slug, {
         assignedSlot: null,
         runnerUp: null,
-        beatenBy: lostPosition,
+        beatenBy: lostPosition.winner,
+        beatenForSlot: lostPosition.label,
         ineligibleReason: null,
       })
     } else {
@@ -150,6 +169,7 @@ function computeFormation(
         assignedSlot: null,
         runnerUp: null,
         beatenBy: null,
+        beatenForSlot: null,
         ineligibleReason: FLEX_INELIGIBLE_REASON[mode],
       })
     }
@@ -163,7 +183,7 @@ export function assignFormation(
   mode: FormationMode = 'normal',
   stackClubSlug?: string,
 ): FormationSlot[] {
-  return computeFormation(candidates, mode, stackClubSlug).slots
+  return computeFormationView(candidates, mode, stackClubSlug).slots
 }
 
 export function explainCandidates(
@@ -171,5 +191,5 @@ export function explainCandidates(
   mode: FormationMode = 'normal',
   stackClubSlug?: string,
 ): Map<string, CandidateExplanation> {
-  return computeFormation(candidates, mode, stackClubSlug).explanations
+  return computeFormationView(candidates, mode, stackClubSlug).explanations
 }

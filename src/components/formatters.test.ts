@@ -223,6 +223,7 @@ describe('formatSlotOutcome', () => {
       assignedSlot: 'Defender',
       runnerUp: buildRankedCandidate('def-2', 65),
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     }
 
@@ -234,6 +235,7 @@ describe('formatSlotOutcome', () => {
       assignedSlot: 'Forward',
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     }
 
@@ -245,21 +247,42 @@ describe('formatSlotOutcome', () => {
       assignedSlot: 'Flex',
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     }
 
     expect(formatSlotOutcome(explanation)).toBe('Ausgewählt für Flex (einzige Option)')
   })
 
-  it('describes being beaten by a specific candidate', () => {
+  it('describes being beaten by a specific candidate, naming the slot they lost', () => {
     const explanation: CandidateExplanation = {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: buildRankedCandidate('def-1', 78),
+      beatenForSlot: 'Defender',
       ineligibleReason: null,
     }
 
-    expect(formatSlotOutcome(explanation)).toBe('Nicht ausgewählt: def-1 hat den Slot mit Score 78 belegt')
+    expect(formatSlotOutcome(explanation)).toBe(
+      'Nicht ausgewählt: def-1 hat die Verteidiger-Position mit Score 78 belegt',
+    )
+  })
+
+  it('describes being beaten for Flex specifically (not the candidate\'s own position)', () => {
+    // This is the scenario the ODI-308 final review flagged: a candidate who lost their own
+    // position AND then also lost Flex must be told about the Flex loss, and the sentence must
+    // name Flex explicitly rather than leaving "the slot" unstated.
+    const explanation: CandidateExplanation = {
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: buildRankedCandidate('mid-2', 75),
+      beatenForSlot: 'Flex',
+      ineligibleReason: null,
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe(
+      'Nicht ausgewählt: mid-2 hat die Flex-Position mit Score 75 belegt',
+    )
   })
 
   it('describes an ineligible candidate using the reason text as-is', () => {
@@ -267,6 +290,7 @@ describe('formatSlotOutcome', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: 'Torhüter sind für die Flex-Position nicht wählbar',
     }
 

@@ -278,6 +278,7 @@ describe('explainCandidates', () => {
       assignedSlot: 'Defender',
       runnerUp: candidates[1],
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     })
   })
@@ -313,6 +314,7 @@ describe('explainCandidates', () => {
       assignedSlot: 'Flex',
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: null,
     })
   })
@@ -337,6 +339,7 @@ describe('explainCandidates', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: candidates.find((c) => c.player.slug === 'mid-2'),
+      beatenForSlot: 'Flex',
       ineligibleReason: null,
     })
   })
@@ -359,6 +362,7 @@ describe('explainCandidates', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: candidates.find((c) => c.player.slug === 'gk-1'),
+      beatenForSlot: 'Goalkeeper',
       ineligibleReason: null,
     })
   })
@@ -381,6 +385,7 @@ describe('explainCandidates', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: 'Im Defensiv-Stack-Modus ist die Flex-Position nur für Verteidiger wählbar',
     })
   })
@@ -397,6 +402,7 @@ describe('explainCandidates', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: 'Nicht im ausgewählten Team-Stack-Verein',
     })
   })
@@ -410,6 +416,7 @@ describe('explainCandidates', () => {
       assignedSlot: null,
       runnerUp: null,
       beatenBy: null,
+      beatenForSlot: null,
       ineligibleReason: 'Noch kein Team-Stack-Verein ausgewählt',
     })
   })

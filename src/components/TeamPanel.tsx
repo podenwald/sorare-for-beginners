@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
-import { assignFormation, explainCandidates } from '../api/formation'
+import { computeFormationView } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
 import {
   CANDIDATES_PER_POSITION,
@@ -158,13 +158,11 @@ export function TeamPanel({ label }: TeamPanelProps) {
     [shortlist, now],
   )
 
-  const slots = useMemo(
-    () => assignFormation(candidates, mode, mode === 'teamStack' ? stackClubSlug : undefined),
-    [candidates, mode, stackClubSlug],
-  )
-
-  const explanations = useMemo(
-    () => explainCandidates(candidates, mode, mode === 'teamStack' ? stackClubSlug : undefined),
+  // Single computation shared by the shortlist chips and FormationList — guarantees the two
+  // views can never disagree about who's in a slot vs. why someone isn't (see ODI-308 final
+  // review: computing this twice, even from identical inputs, left the invariant unenforced).
+  const { slots, explanations } = useMemo(
+    () => computeFormationView(candidates, mode, mode === 'teamStack' ? stackClubSlug : undefined),
     [candidates, mode, stackClubSlug],
   )
 
@@ -315,12 +313,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
         })}
       </div>
 
-      <FormationList
-        slots={slots}
-        candidates={candidates}
-        mode={mode}
-        stackClubSlug={mode === 'teamStack' ? stackClubSlug : undefined}
-      />
+      <FormationList slots={slots} explanations={explanations} />
     </section>
   )
 }

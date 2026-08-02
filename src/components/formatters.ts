@@ -1,7 +1,7 @@
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
 import { MARKET_RARITIES } from '../api/sorareClient'
 import type { MarketOfferAmount, MarketRarity } from '../api/types'
-import type { CandidateExplanation } from '../api/formation'
+import type { CandidateExplanation, FormationSlotLabel } from '../api/formation'
 
 export function formatScore(value: number | null): string {
   return value == null || Number.isNaN(value) ? '–' : String(Math.round(value))
@@ -39,7 +39,7 @@ export function formatMarketRarity(rarity: MarketRarity): string {
   return MARKET_RARITIES.find((entry) => entry.value === rarity)?.label ?? rarity
 }
 
-const SLOT_LABEL_TEXT: Record<'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forward' | 'Flex', string> = {
+export const SLOT_LABEL_TEXT: Record<FormationSlotLabel, string> = {
   Goalkeeper: 'Torwart',
   Defender: 'Verteidiger',
   Midfielder: 'Mittelfeld',
@@ -47,14 +47,19 @@ const SLOT_LABEL_TEXT: Record<'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forwar
   Flex: 'Flex',
 }
 
+export function formatSlotLabel(label: FormationSlotLabel): string {
+  return SLOT_LABEL_TEXT[label]
+}
+
 export function formatSlotOutcome(explanation: CandidateExplanation): string {
   if (explanation.assignedSlot) {
-    const label = SLOT_LABEL_TEXT[explanation.assignedSlot]
+    const label = formatSlotLabel(explanation.assignedSlot)
     if (!explanation.runnerUp) return `Ausgewählt für ${label} (einzige Option)`
     return `Ausgewählt für ${label} — vor ${explanation.runnerUp.player.displayName} (Score ${formatScore(explanation.runnerUp.evaluation.overall.value)})`
   }
   if (explanation.beatenBy) {
-    return `Nicht ausgewählt: ${explanation.beatenBy.player.displayName} hat den Slot mit Score ${formatScore(explanation.beatenBy.evaluation.overall.value)} belegt`
+    const forSlot = explanation.beatenForSlot ? ` die ${formatSlotLabel(explanation.beatenForSlot)}-Position` : ' den Slot'
+    return `Nicht ausgewählt: ${explanation.beatenBy.player.displayName} hat${forSlot} mit Score ${formatScore(explanation.beatenBy.evaluation.overall.value)} belegt`
   }
   return `Nicht ausgewählt: ${explanation.ineligibleReason}`
 }
