@@ -108,7 +108,6 @@ function computeFormation(
   }
 
   const flexEligible = remaining.filter(FLEX_ELIGIBLE[mode])
-  const flexIneligible = remaining.filter((candidate) => !FLEX_ELIGIBLE[mode](candidate))
   const rankedFlex = rankPool(flexEligible)
   const flexWinner = rankedFlex[0] ?? null
   const flexRunnerUp = rankedFlex[1] ?? null
@@ -155,11 +154,6 @@ function computeFormation(
       })
     }
   }
-
-  // `flexIneligible` is exactly the `remaining` candidates for whom `FLEX_ELIGIBLE[mode]` is
-  // false — handled by the `lostPosition`/`ineligibleReason` branches above. The set itself is
-  // only needed to compute `flexEligible`/`rankedFlex`, nothing further to do with it here.
-  void flexIneligible
 
   return { slots, explanations }
 }
