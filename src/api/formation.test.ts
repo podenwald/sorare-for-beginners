@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assignFormation } from './formation'
+import { assignFormation, explainCandidates } from './formation'
 import type { EvaluatedCandidate } from './formation'
 import type { Player } from './types'
 import type { PlayerEvaluation, EvaluationCategory } from './scoring'
@@ -261,5 +261,163 @@ describe('assignFormation', () => {
     const slots = assignFormation(candidates, 'teamStack', undefined)
 
     expect(slots.every((slot) => slot.candidate === null)).toBe(true)
+  })
+})
+
+describe('explainCandidates', () => {
+  it('gives the winner of an exact position their slot label and the runner-up', () => {
+    const candidates = [
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('def-2', 'Defender', 50),
+      buildCandidate('def-3', 'Defender', 30),
+    ]
+
+    const explanations = explainCandidates(candidates)
+
+    expect(explanations.get('def-1')).toEqual({
+      assignedSlot: 'Defender',
+      runnerUp: candidates[1],
+      beatenBy: null,
+      ineligibleReason: null,
+    })
+  })
+
+  it('gives every entry exactly one explanation for every candidate passed in', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const explanations = explainCandidates(candidates)
+
+    expect(explanations.size).toBe(4)
+    for (const candidate of candidates) {
+      expect(explanations.has(candidate.player.slug)).toBe(true)
+    }
+  })
+
+  it('explains a leftover same-position candidate who goes on to win Flex as assigned to Flex, not beaten', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('def-2', 'Defender', 50),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const explanations = explainCandidates(candidates)
+
+    expect(explanations.get('def-2')).toEqual({
+      assignedSlot: 'Flex',
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: null,
+    })
+  })
+
+  it('attributes beatenBy to the own-position winner, not the Flex winner, even when the candidate also lost Flex', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('def-2', 'Defender', 50),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('mid-2', 'Midfielder', 75),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const explanations = explainCandidates(candidates)
+
+    // def-2 loses Defender to def-1, then ALSO loses Flex to mid-2 (75 beats 50 among the
+    // leftover non-GKs). Per the documented precedence (own-position loss is the more
+    // specific/useful reason), beatenBy stays def-1 — it is never overwritten by the Flex result.
+    expect(explanations.get('def-2')).toEqual({
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: candidates.find((c) => c.player.slug === 'def-1'),
+      ineligibleReason: null,
+    })
+  })
+
+  it('explains a losing exact-position candidate as beaten by that position\'s winner when they are also Flex-ineligible', () => {
+    const candidates = [
+      buildCandidate('gk-1', 'Goalkeeper', 60),
+      buildCandidate('gk-2', 'Goalkeeper', 40),
+      buildCandidate('def-1', 'Defender', 70),
+      buildCandidate('mid-1', 'Midfielder', 80),
+      buildCandidate('fwd-1', 'Forward', 90),
+    ]
+
+    const explanations = explainCandidates(candidates)
+
+    // Goalkeepers are never Flex-eligible in any mode, so gk-2's only relevant reason is losing
+    // Goalkeeper to gk-1 — not a generic "goalkeepers can't play Flex" (which would be true of
+    // gk-1 too, and isn't the reason gk-2 specifically didn't make the team).
+    expect(explanations.get('gk-2')).toEqual({
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: candidates.find((c) => c.player.slug === 'gk-1'),
+      ineligibleReason: null,
+    })
+  })
+
+  it('explains a Flex-ineligible candidate with no own exact-position slot to compete for via ineligibleReason', () => {
+    // 'Unknown' is a valid Player['position'] (see src/api/types.ts) that has no corresponding
+    // entry in EXACT_POSITION_SLOTS, so such a candidate never wins or loses an exact-position
+    // slot at all — there's no positionLoss to attribute a beatenBy to, only Flex eligibility.
+    // A real Goalkeeper/Defender/Midfielder/Forward candidate can't exercise this branch: they
+    // always either win their own exact slot outright or lose it to a specific rival (beatenBy),
+    // per the precedence in computeFormation's final-resolution loop.
+    const candidates = [buildCandidate('def-1', 'Defender', 70), buildCandidate('unknown-1', 'Unknown', 50)]
+
+    // defensiveStack mode: Flex is Defender-only, so unknown-1 (not a Defender, and with no exact
+    // position slot to lose) ends up ineligible rather than beaten.
+    const explanations = explainCandidates(candidates, 'defensiveStack')
+
+    expect(explanations.get('def-1')?.assignedSlot).toBe('Defender')
+    expect(explanations.get('unknown-1')).toEqual({
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: 'Im Defensiv-Stack-Modus ist die Flex-Position nur für Verteidiger wählbar',
+    })
+  })
+
+  it('explains a candidate outside the selected Team-Stack club as ineligible', () => {
+    const candidates = [
+      buildCandidate('gk-club-a', 'Goalkeeper', 60, 'gut', 'club-a'),
+      buildCandidate('def-club-b', 'Defender', 90, 'gut', 'club-b'),
+    ]
+
+    const explanations = explainCandidates(candidates, 'teamStack', 'club-a')
+
+    expect(explanations.get('def-club-b')).toEqual({
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: 'Nicht im ausgewählten Team-Stack-Verein',
+    })
+  })
+
+  it('explains every candidate as ineligible when no Team-Stack club is selected yet', () => {
+    const candidates = [buildCandidate('gk-1', 'Goalkeeper', 60, 'gut', 'club-a')]
+
+    const explanations = explainCandidates(candidates, 'teamStack', undefined)
+
+    expect(explanations.get('gk-1')).toEqual({
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: 'Noch kein Team-Stack-Verein ausgewählt',
+    })
+  })
+
+  it('sets runnerUp to null for a slot winner with no competition', () => {
+    const candidates = [buildCandidate('fwd-1', 'Forward', 90)]
+
+    const explanations = explainCandidates(candidates)
+
+    expect(explanations.get('fwd-1')?.runnerUp).toBeNull()
   })
 })
