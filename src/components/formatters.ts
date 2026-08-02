@@ -1,6 +1,7 @@
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
 import { MARKET_RARITIES } from '../api/sorareClient'
 import type { MarketOfferAmount, MarketRarity } from '../api/types'
+import type { CandidateExplanation } from '../api/formation'
 
 export function formatScore(value: number | null): string {
   return value == null || Number.isNaN(value) ? '–' : String(Math.round(value))
@@ -36,6 +37,26 @@ export function formatMarketOfferAmount(amount: MarketOfferAmount): string {
 
 export function formatMarketRarity(rarity: MarketRarity): string {
   return MARKET_RARITIES.find((entry) => entry.value === rarity)?.label ?? rarity
+}
+
+const SLOT_LABEL_TEXT: Record<'Goalkeeper' | 'Defender' | 'Midfielder' | 'Forward' | 'Flex', string> = {
+  Goalkeeper: 'Torwart',
+  Defender: 'Verteidiger',
+  Midfielder: 'Mittelfeld',
+  Forward: 'Sturm',
+  Flex: 'Flex',
+}
+
+export function formatSlotOutcome(explanation: CandidateExplanation): string {
+  if (explanation.assignedSlot) {
+    const label = SLOT_LABEL_TEXT[explanation.assignedSlot]
+    if (!explanation.runnerUp) return `Ausgewählt für ${label} (einzige Option)`
+    return `Ausgewählt für ${label} — vor ${explanation.runnerUp.player.displayName} (Score ${formatScore(explanation.runnerUp.evaluation.overall.value)})`
+  }
+  if (explanation.beatenBy) {
+    return `Nicht ausgewählt: ${explanation.beatenBy.player.displayName} hat den Slot mit Score ${formatScore(explanation.beatenBy.evaluation.overall.value)} belegt`
+  }
+  return `Nicht ausgewählt: ${explanation.ineligibleReason}`
 }
 
 export function getMarketOfferUrl(cardSlug: string): string {

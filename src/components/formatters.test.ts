@@ -3,11 +3,13 @@ import {
   formatMarketOfferAmount,
   formatMarketPrice,
   formatMarketRarity,
+  formatSlotOutcome,
   getAvailabilityWarning,
   getMarketOfferUrl,
   getScoreExplanation,
 } from './formatters'
 import type { AvailabilityIssue, PlayerEvaluation } from '../api/scoring'
+import type { CandidateExplanation, EvaluatedCandidate } from '../api/formation'
 
 const eur = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 
@@ -171,5 +173,103 @@ describe('getScoreExplanation', () => {
     })
 
     expect(getScoreExplanation(evaluation)).toBe('Score: 60% Potenzial (–) + 40% Beständigkeit (–)')
+  })
+})
+
+function buildRankedCandidate(slug: string, overallValue: number): EvaluatedCandidate {
+  return {
+    player: {
+      slug,
+      displayName: slug,
+      position: 'Forward',
+      age: 25,
+      activeClub: null,
+      activeInjuries: [],
+      activeSuspensions: [],
+      recentSo5Scores: [],
+      seasonStats: null,
+      sorareAverageScores: { l5: null, l10: null, l40: null },
+      marketPrices: {
+        classicEurCents: null,
+        inSeasonEurCents: null,
+        classicOfferAmount: null,
+        inSeasonOfferAmount: null,
+        classicCardSlug: null,
+        inSeasonCardSlug: null,
+        rarity: 'limited',
+      },
+    },
+    evaluation: {
+      overall: { value: overallValue, category: 'gut' },
+      scorePotential: { value: overallValue, category: 'gut' },
+      consistency: {
+        value: overallValue,
+        category: 'gut',
+        factors: {
+          availability: { value: 100, category: 'gut' },
+          minutesConsistency: { value: 100, category: 'gut' },
+          rotationRisk: { value: 100, category: 'gut' },
+          formTrend: { value: 100, category: 'gut' },
+        },
+      },
+      availabilityIssue: null,
+    },
+  }
+}
+
+describe('formatSlotOutcome', () => {
+  it('describes an assigned slot with a runner-up', () => {
+    const explanation: CandidateExplanation = {
+      assignedSlot: 'Defender',
+      runnerUp: buildRankedCandidate('def-2', 65),
+      beatenBy: null,
+      ineligibleReason: null,
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe('Ausgewählt für Verteidiger — vor def-2 (Score 65)')
+  })
+
+  it('describes an assigned slot with no competition', () => {
+    const explanation: CandidateExplanation = {
+      assignedSlot: 'Forward',
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: null,
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe('Ausgewählt für Sturm (einzige Option)')
+  })
+
+  it('describes a Flex assignment using the Flex label', () => {
+    const explanation: CandidateExplanation = {
+      assignedSlot: 'Flex',
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: null,
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe('Ausgewählt für Flex (einzige Option)')
+  })
+
+  it('describes being beaten by a specific candidate', () => {
+    const explanation: CandidateExplanation = {
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: buildRankedCandidate('def-1', 78),
+      ineligibleReason: null,
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe('Nicht ausgewählt: def-1 hat den Slot mit Score 78 belegt')
+  })
+
+  it('describes an ineligible candidate using the reason text as-is', () => {
+    const explanation: CandidateExplanation = {
+      assignedSlot: null,
+      runnerUp: null,
+      beatenBy: null,
+      ineligibleReason: 'Torhüter sind für die Flex-Position nicht wählbar',
+    }
+
+    expect(formatSlotOutcome(explanation)).toBe('Nicht ausgewählt: Torhüter sind für die Flex-Position nicht wählbar')
   })
 })
