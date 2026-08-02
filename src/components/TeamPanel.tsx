@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
-import { assignFormation } from '../api/formation'
+import { assignFormation, explainCandidates } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
 import {
   CANDIDATES_PER_POSITION,
@@ -17,6 +17,7 @@ import {
 import { SorareApiError } from '../api/types'
 import type { MarketRarity, Player } from '../api/types'
 import type { EvaluatedCandidate, FormationMode } from '../api/formation'
+import { formatSlotOutcome } from './formatters'
 
 interface TeamPanelProps {
   label: string
@@ -162,6 +163,11 @@ export function TeamPanel({ label }: TeamPanelProps) {
     [candidates, mode, stackClubSlug],
   )
 
+  const explanations = useMemo(
+    () => explainCandidates(candidates, mode, mode === 'teamStack' ? stackClubSlug : undefined),
+    [candidates, mode, stackClubSlug],
+  )
+
   return (
     <section className="team-panel" aria-labelledby={headingId}>
       <h2 id={headingId}>{label}</h2>
@@ -285,21 +291,36 @@ export function TeamPanel({ label }: TeamPanelProps) {
       )}
 
       <div className="shortlist">
-        {shortlist.map((player) => (
-          <span key={player.slug} className="shortlist-chip">
-            {player.displayName}
-            <button
-              type="button"
-              onClick={() => handleRemove(player.slug)}
-              aria-label={`${player.displayName} von der Shortlist entfernen`}
+        {shortlist.map((player) => {
+          const explanation = explanations.get(player.slug)
+          const isInSlot = explanation?.assignedSlot != null
+          // Only chips for players NOT currently in a slot get a tooltip — that info is already
+          // visible via the ℹ️ icon in the formation list for anyone who IS in a slot.
+          return (
+            <span
+              key={player.slug}
+              className={explanation && !isInSlot ? 'shortlist-chip icon-tooltip' : 'shortlist-chip'}
+              data-tooltip={explanation && !isInSlot ? formatSlotOutcome(explanation) : undefined}
             >
-              ✕
-            </button>
-          </span>
-        ))}
+              {player.displayName}
+              <button
+                type="button"
+                onClick={() => handleRemove(player.slug)}
+                aria-label={`${player.displayName} von der Shortlist entfernen`}
+              >
+                ✕
+              </button>
+            </span>
+          )
+        })}
       </div>
 
-      <FormationList slots={slots} />
+      <FormationList
+        slots={slots}
+        candidates={candidates}
+        mode={mode}
+        stackClubSlug={mode === 'teamStack' ? stackClubSlug : undefined}
+      />
     </section>
   )
 }
