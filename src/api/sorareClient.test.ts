@@ -604,7 +604,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
       },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de'], 'Defender')
 
     expect(hits.map((hit) => hit.slug)).toEqual(['regular-high-score', 'starter-low-score', 'sub-high-score'])
   })
@@ -649,17 +649,15 @@ describe('searchPlayersByLeagueAndPosition', () => {
       },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Forward')
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de'], 'Forward')
 
     expect(hits.map((hit) => hit.slug)).toEqual(['scored-starter', 'no-data-starter'])
   })
 
   it('skips a club with no data and returns an empty array when the competition is not found', async () => {
-    mockFetchSequence([
-      { data: { football: { competition: null } } },
-    ])
+    mockFetchSequence([{ data: { football: { competition: null } } }])
 
-    const hits = await searchPlayersByLeagueAndPosition('unknown-league', 'Defender')
+    const hits = await searchPlayersByLeagueAndPosition(['unknown-league'], 'Defender')
 
     expect(hits).toEqual([])
   })
@@ -696,14 +694,14 @@ describe('searchPlayersByLeagueAndPosition', () => {
       },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Goalkeeper')
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de'], 'Goalkeeper')
 
     expect(hits).toEqual([
       { slug: 'a-player', displayName: 'A Player', positions: ['Goalkeeper'], clubName: 'Club A' },
     ])
   })
 
-  it('merges and sorts results across multiple clubs, keeping each hit tagged with its own club', async () => {
+  it('merges and sorts results across multiple clubs in the same league, keeping each hit tagged with its own club', async () => {
     mockFetchSequence([
       {
         data: {
@@ -745,7 +743,61 @@ describe('searchPlayersByLeagueAndPosition', () => {
       },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de'], 'Defender')
+
+    expect(hits).toEqual([
+      { slug: 'b-starter-high', displayName: 'B Starter High', positions: ['Defender'], clubName: 'Club B' },
+      { slug: 'a-starter-low', displayName: 'A Starter Low', positions: ['Defender'], clubName: 'Club A' },
+    ])
+  })
+
+  it('merges and sorts results across multiple selected leagues, keeping each hit tagged with its own club', async () => {
+    mockFetchSequence([
+      {
+        data: {
+          football: {
+            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            competition: { name: 'Ligue 1', clubs: { nodes: [{ slug: 'club-b', name: 'Club B' }] } },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club A',
+              activePlayers: {
+                nodes: [
+                  { slug: 'a-starter-low', displayName: 'A Starter Low', position: 'Defender', playingStatus: 'STARTER', l10: 20, l40: 20 },
+                ],
+              },
+            },
+          },
+        },
+      },
+      {
+        data: {
+          football: {
+            club: {
+              name: 'Club B',
+              activePlayers: {
+                nodes: [
+                  { slug: 'b-starter-high', displayName: 'B Starter High', position: 'Defender', playingStatus: 'STARTER', l10: 80, l40: 80 },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de', 'ligue-1-fr'], 'Defender')
 
     expect(hits).toEqual([
       { slug: 'b-starter-high', displayName: 'B Starter High', positions: ['Defender'], clubName: 'Club B' },
@@ -782,7 +834,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
       { errors: [{ message: 'Upstream Sorare API unavailable' }] },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('bundesliga-de', 'Defender')
+    const hits = await searchPlayersByLeagueAndPosition(['bundesliga-de'], 'Defender')
 
     expect(hits).toEqual([
       { slug: 'a-starter', displayName: 'A Starter', positions: ['Defender'], clubName: 'Club A' },
@@ -794,9 +846,18 @@ describe('searchPlayersByLeagueAndPosition', () => {
       { data: { football: { competition: { name: 'Empty League', clubs: { nodes: [] } } } } },
     ])
 
-    const hits = await searchPlayersByLeagueAndPosition('empty-league', 'Defender')
+    const hits = await searchPlayersByLeagueAndPosition(['empty-league'], 'Defender')
 
     expect(hits).toEqual([])
+  })
+
+  it('returns an empty array and makes no fetch calls when leagueSlugs is empty', async () => {
+    vi.stubGlobal('fetch', vi.fn())
+
+    const hits = await searchPlayersByLeagueAndPosition([], 'Defender')
+
+    expect(hits).toEqual([])
+    expect(fetch).not.toHaveBeenCalled()
   })
 })
 
@@ -813,7 +874,7 @@ describe('getLeagueClubs', () => {
       },
     })
 
-    const clubs = await getLeagueClubs('bundesliga-de')
+    const clubs = await getLeagueClubs(['bundesliga-de'])
 
     expect(fetch).toHaveBeenCalledWith('/api/sorare-proxy.php', {
       method: 'POST',
@@ -826,9 +887,40 @@ describe('getLeagueClubs', () => {
   it('returns an empty array when the competition is not found', async () => {
     mockFetchOnce({ data: { football: { competition: null } } })
 
-    const clubs = await getLeagueClubs('unknown-league')
+    const clubs = await getLeagueClubs(['unknown-league'])
 
     expect(clubs).toEqual([])
+  })
+
+  it('unions clubs from multiple leagues', async () => {
+    mockFetchSequence([
+      { data: { football: { competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } } } } },
+      { data: { football: { competition: { name: 'Ligue 1', clubs: { nodes: [{ slug: 'club-b', name: 'Club B' }] } } } } },
+    ])
+
+    const clubs = await getLeagueClubs(['bundesliga-de', 'ligue-1-fr'])
+
+    expect(clubs).toEqual([{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }])
+  })
+
+  it('dedupes a club that appears in more than one selected league', async () => {
+    mockFetchSequence([
+      { data: { football: { competition: { name: 'League A', clubs: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
+      { data: { football: { competition: { name: 'League B', clubs: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
+    ])
+
+    const clubs = await getLeagueClubs(['league-a', 'league-b'])
+
+    expect(clubs).toEqual([{ slug: 'club-x', name: 'Club X' }])
+  })
+
+  it('returns an empty array and makes no fetch calls for an empty leagueSlugs array', async () => {
+    vi.stubGlobal('fetch', vi.fn())
+
+    const clubs = await getLeagueClubs([])
+
+    expect(clubs).toEqual([])
+    expect(fetch).not.toHaveBeenCalled()
   })
 })
 

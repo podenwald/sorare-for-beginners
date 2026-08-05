@@ -306,9 +306,16 @@ function performanceRank(l10: number | null, l40: number | null): number {
 export const FORMATION_POSITIONS: Position[] = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward']
 export const CANDIDATES_PER_POSITION = 2
 
-export async function getLeagueClubs(leagueSlug: string): Promise<{ slug: string; name: string }[]> {
-  const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
-  return leagueData.football.competition?.clubs.nodes ?? []
+export async function getLeagueClubs(leagueSlugs: string[]): Promise<{ slug: string; name: string }[]> {
+  const settled = await Promise.allSettled(
+    leagueSlugs.map((leagueSlug) => callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })),
+  )
+  const clubs = settled.flatMap((result) =>
+    result.status === 'fulfilled' ? result.value.football.competition?.clubs.nodes ?? [] : [],
+  )
+  // Dedupe defensiv nach Slug — die Mehrfachauswahl erlaubt beliebige Liga-Kombinationen; ein Klub,
+  // der in zwei ausgewählten Ligen auftaucht, ist zumindest theoretisch nicht ausgeschlossen.
+  return Array.from(new Map(clubs.map((club) => [club.slug, club])).values())
 }
 
 export async function getClubRoster(clubSlug: string): Promise<PlayerSearchHit[]> {
@@ -332,11 +339,10 @@ export async function getClubRoster(clubSlug: string): Promise<PlayerSearchHit[]
 }
 
 export async function searchPlayersByLeagueAndPosition(
-  leagueSlug: string,
+  leagueSlugs: string[],
   position: Position,
 ): Promise<PlayerSearchHit[]> {
-  const leagueData = await callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })
-  const clubs = leagueData.football.competition?.clubs.nodes ?? []
+  const clubs = await getLeagueClubs(leagueSlugs)
 
   const settled = await Promise.allSettled(
     clubs.map((club) => callProxy<ClubPlayersRaw>('clubPlayers', { clubSlug: club.slug })),
