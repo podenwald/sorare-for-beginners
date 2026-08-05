@@ -5,6 +5,7 @@ import { evaluatePlayer } from '../api/scoring'
 import { SorareApiError } from '../api/types'
 import type { MarketRarity, Player, PlayerSearchHit, Position } from '../api/types'
 import { PlayerScoreSummary } from './PlayerScoreSummary'
+import { LeagueMultiSelect } from './LeagueMultiSelect'
 
 const POSITIONS: { value: Position; label: string }[] = [
   { value: 'Goalkeeper', label: 'Torwart' },
@@ -25,7 +26,7 @@ interface LeaguePositionSearchProps {
 }
 
 export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePositionSearchProps) {
-  const [leagueSlug, setLeagueSlug] = useState<string>(LEAGUES[0].slug)
+  const [leagueSlugs, setLeagueSlugs] = useState<string[]>([LEAGUES[0].slug])
   const [position, setPosition] = useState<Position>('Defender')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
   const [resultDetails, setResultDetails] = useState<Record<string, Player>>({})
@@ -43,7 +44,7 @@ export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePosit
     setSearchError(null)
     setResultDetails({})
     try {
-      const hits = await searchPlayersByLeagueAndPosition(leagueSlug, position)
+      const hits = await searchPlayersByLeagueAndPosition(leagueSlugs, position)
       setResults(hits)
       const detailed = hits.slice(0, DETAILED_RESULTS_LIMIT)
       const settled = await Promise.allSettled(detailed.map((hit) => getPlayer(hit.slug, marketRarity)))
@@ -122,20 +123,14 @@ export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePosit
   return (
     <div className="league-position-search">
       <form onSubmit={handleSearch}>
-        <select
-          value={leagueSlug}
-          onChange={(event) => {
-            setLeagueSlug(event.target.value)
+        <LeagueMultiSelect
+          label={`${label} — Liga`}
+          selectedSlugs={leagueSlugs}
+          onChange={(slugs) => {
+            setLeagueSlugs(slugs)
             handleFilterChange()
           }}
-          aria-label={`${label} — Liga`}
-        >
-          {LEAGUES.map((league) => (
-            <option key={league.slug} value={league.slug}>
-              {league.name}
-            </option>
-          ))}
-        </select>
+        />
         <select
           value={position}
           onChange={(event) => {

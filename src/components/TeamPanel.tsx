@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { PlayerSearch } from './PlayerSearch'
 import { LeaguePositionSearch } from './LeaguePositionSearch'
 import { FormationList } from './FormationList'
+import { LeagueMultiSelect } from './LeagueMultiSelect'
 import { computeFormationView } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
 import {
@@ -28,10 +29,10 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const groupName = useId()
   const [shortlist, setShortlist] = useState<Player[]>([])
   const [mode, setMode] = useState<FormationMode>('normal')
-  const [autoFillLeague, setAutoFillLeague] = useState<string>(LEAGUES[0].slug)
+  const [autoFillLeagues, setAutoFillLeagues] = useState<string[]>([LEAGUES[0].slug])
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [autoFillError, setAutoFillError] = useState<string | null>(null)
-  const [stackLeague, setStackLeague] = useState<string>(LEAGUES[0].slug)
+  const [stackLeagues, setStackLeagues] = useState<string[]>([LEAGUES[0].slug])
   const [stackClubs, setStackClubs] = useState<{ slug: string; name: string }[]>([])
   const [stackClubSlug, setStackClubSlug] = useState<string>('')
   const [isLoadingClubs, setIsLoadingClubs] = useState(false)
@@ -47,7 +48,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     let cancelled = false
     setIsLoadingClubs(true)
     setStackError(null)
-    getLeagueClubs(stackLeague)
+    getLeagueClubs(stackLeagues)
       .then((clubs) => {
         if (cancelled) return
         setStackClubs(clubs)
@@ -62,7 +63,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [mode, stackLeague])
+  }, [mode, stackLeagues])
 
   // Self-healing price refresh: re-fetches any shortlisted player whose prices were fetched
   // under a different rarity than the one currently selected. Since `shortlist` is a
@@ -120,7 +121,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     setAutoFillError(null)
     try {
       const picksPerPosition = await Promise.all(
-        FORMATION_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeague, position)),
+        FORMATION_POSITIONS.map((position) => searchPlayersByLeagueAndPosition(autoFillLeagues, position)),
       )
       const topSlugs = picksPerPosition.flatMap((hits) => hits.slice(0, CANDIDATES_PER_POSITION).map((hit) => hit.slug))
       const settled = await Promise.allSettled(topSlugs.map((slug) => getPlayer(slug, marketRarity)))
@@ -231,17 +232,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
       <LeaguePositionSearch onAdd={handleAdd} label={label} marketRarity={marketRarity} />
 
       <div className="auto-fill">
-        <select
-          value={autoFillLeague}
-          onChange={(event) => setAutoFillLeague(event.target.value)}
-          aria-label={`${label} — KI-Team Liga`}
-        >
-          {LEAGUES.map((league) => (
-            <option key={league.slug} value={league.slug}>
-              {league.name}
-            </option>
-          ))}
-        </select>
+        <LeagueMultiSelect label={`${label} — KI-Team Liga`} selectedSlugs={autoFillLeagues} onChange={setAutoFillLeagues} />
         <button type="button" onClick={handleAutoFill} disabled={isAutoFilling}>
           {isAutoFilling ? 'KI wählt aus...' : 'KI-Team erstellen'}
         </button>
@@ -254,17 +245,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
 
       {mode === 'teamStack' && (
         <div className="team-stack">
-          <select
-            value={stackLeague}
-            onChange={(event) => setStackLeague(event.target.value)}
-            aria-label={`${label} — Team-Stack Liga`}
-          >
-            {LEAGUES.map((league) => (
-              <option key={league.slug} value={league.slug}>
-                {league.name}
-              </option>
-            ))}
-          </select>
+          <LeagueMultiSelect label={`${label} — Team-Stack Liga`} selectedSlugs={stackLeagues} onChange={setStackLeagues} />
           <select
             value={stackClubSlug}
             onChange={(event) => setStackClubSlug(event.target.value)}
