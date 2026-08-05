@@ -22,6 +22,9 @@ export function LeagueMultiSelect({ label, selectedSlugs, onChange }: LeagueMult
         <button type="button" onClick={() => onChange(CONTENDER_LEAGUE_SLUGS)}>
           Contender
         </button>
+        <button type="button" onClick={() => onChange([])}>
+          Zurücksetzen
+        </button>
       </div>
       <div className="league-checkboxes" role="group" aria-label={label}>
         {LEAGUES.map((league) => (

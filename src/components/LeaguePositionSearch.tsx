@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { getPlayer, LEAGUES, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
+import { getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
 import { evaluatePlayer } from '../api/scoring'
 import { SorareApiError } from '../api/types'
 import type { MarketRarity, Player, PlayerSearchHit, Position } from '../api/types'
@@ -26,7 +26,7 @@ interface LeaguePositionSearchProps {
 }
 
 export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePositionSearchProps) {
-  const [leagueSlugs, setLeagueSlugs] = useState<string[]>([LEAGUES[0].slug])
+  const [leagueSlugs, setLeagueSlugs] = useState<string[]>([])
   const [position, setPosition] = useState<Position>('Defender')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
   const [resultDetails, setResultDetails] = useState<Record<string, Player>>({})

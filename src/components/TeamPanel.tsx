@@ -8,7 +8,6 @@ import { evaluatePlayer } from '../api/scoring'
 import {
   CANDIDATES_PER_POSITION,
   FORMATION_POSITIONS,
-  LEAGUES,
   MARKET_RARITIES,
   getClubRoster,
   getLeagueClubs,
@@ -29,10 +28,10 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const groupName = useId()
   const [shortlist, setShortlist] = useState<Player[]>([])
   const [mode, setMode] = useState<FormationMode>('normal')
-  const [autoFillLeagues, setAutoFillLeagues] = useState<string[]>([LEAGUES[0].slug])
+  const [autoFillLeagues, setAutoFillLeagues] = useState<string[]>([])
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [autoFillError, setAutoFillError] = useState<string | null>(null)
-  const [stackLeagues, setStackLeagues] = useState<string[]>([LEAGUES[0].slug])
+  const [stackLeagues, setStackLeagues] = useState<string[]>([])
   const [stackClubs, setStackClubs] = useState<{ slug: string; name: string }[]>([])
   const [stackClubSlug, setStackClubSlug] = useState<string>('')
   const [isLoadingClubs, setIsLoadingClubs] = useState(false)
