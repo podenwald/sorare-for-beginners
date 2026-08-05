@@ -13,10 +13,50 @@ import { getCurrentSeasonStartYear } from './season'
 export const LEAGUES = [
   { slug: 'premier-league-gb-eng', name: 'Premier League' },
   { slug: 'bundesliga-de', name: 'Bundesliga' },
-  { slug: 'laliga-es', name: 'La Liga' },
+  { slug: 'laliga-es', name: 'LALIGA EA SPORTS' },
   { slug: 'ligue-1-fr', name: 'Ligue 1' },
   { slug: 'mlspa', name: 'MLS' },
+  { slug: 'jupiler-pro-league', name: 'Jupiler Pro League' },
+  { slug: 'eredivisie', name: 'Eredivisie' },
+  { slug: 'j1-league', name: 'J1 League' },
+  { slug: 'k-league-1', name: 'K League 1' },
+  { slug: 'serie-a-it', name: 'Italian League' },
+  { slug: 'primeira-liga-pt', name: 'Liga Portugal' },
+  { slug: 'spor-toto-super-lig', name: 'Turkish League' },
+  { slug: 'football-league-championship', name: 'EFL Championship' },
+  { slug: 'premiership-gb-sct', name: 'SPFL' },
 ] as const
+
+export const CHAMPION_LEAGUE_SLUGS: string[] = [
+  'premier-league-gb-eng',
+  'bundesliga-de',
+  'laliga-es',
+  'ligue-1-fr',
+  'serie-a-it',
+]
+
+export const CONTENDER_LEAGUE_SLUGS: string[] = [
+  'eliteserien',
+  '1-hnl',
+  'superliga-argentina-de-futbol',
+  '2-bundesliga',
+  'ligue-2-fr',
+  'campeonato-brasileiro-serie-a',
+  'liga-mx',
+  'russian-premier-league',
+  'super-league-ch',
+  'segunda-division-es',
+  'serie-a-it',
+  'serie-b-it',
+  'primera-division-cl',
+  'liga-pro',
+  'primera-division-pe',
+  'chinese-super-league',
+  'primera-a',
+  'austrian-bundesliga',
+  'spor-toto-super-lig',
+  'superliga-dk',
+]
 
 export const MARKET_RARITIES: { value: MarketRarity; label: string }[] = [
   { value: 'limited', label: 'Limited' },
