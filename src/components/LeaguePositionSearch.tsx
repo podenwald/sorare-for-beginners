@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
+import { ALL_LEAGUE_SLUGS, getPlayer, searchPlayersByLeagueAndPosition } from '../api/sorareClient'
 import { evaluatePlayer } from '../api/scoring'
 import { SorareApiError } from '../api/types'
 import type { MarketRarity, Player, PlayerSearchHit, Position } from '../api/types'
 import { PlayerScoreSummary } from './PlayerScoreSummary'
-import { LeagueMultiSelect } from './LeagueMultiSelect'
 
 const POSITIONS: { value: Position; label: string }[] = [
   { value: 'Goalkeeper', label: 'Torwart' },
@@ -26,7 +25,6 @@ interface LeaguePositionSearchProps {
 }
 
 export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePositionSearchProps) {
-  const [leagueSlugs, setLeagueSlugs] = useState<string[]>([])
   const [position, setPosition] = useState<Position>('Defender')
   const [results, setResults] = useState<PlayerSearchHit[]>([])
   const [resultDetails, setResultDetails] = useState<Record<string, Player>>({})
@@ -44,7 +42,7 @@ export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePosit
     setSearchError(null)
     setResultDetails({})
     try {
-      const hits = await searchPlayersByLeagueAndPosition(leagueSlugs, position)
+      const hits = await searchPlayersByLeagueAndPosition(ALL_LEAGUE_SLUGS, position)
       setResults(hits)
       const detailed = hits.slice(0, DETAILED_RESULTS_LIMIT)
       const settled = await Promise.allSettled(detailed.map((hit) => getPlayer(hit.slug, marketRarity)))
@@ -123,14 +121,6 @@ export function LeaguePositionSearch({ onAdd, label, marketRarity }: LeaguePosit
   return (
     <div className="league-position-search">
       <form onSubmit={handleSearch}>
-        <LeagueMultiSelect
-          label={`${label} — Liga`}
-          selectedSlugs={leagueSlugs}
-          onChange={(slugs) => {
-            setLeagueSlugs(slugs)
-            handleFilterChange()
-          }}
-        />
         <select
           value={position}
           onChange={(event) => {

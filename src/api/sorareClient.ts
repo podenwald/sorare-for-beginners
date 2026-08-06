@@ -45,6 +45,8 @@ export const LEAGUES = [
   { slug: 'superliga-dk', name: 'Superliga (Dänemark)' },
 ] as const
 
+export const ALL_LEAGUE_SLUGS: string[] = LEAGUES.map((league) => league.slug)
+
 export const CHAMPION_LEAGUE_SLUGS: string[] = [
   'premier-league-gb-eng',
   'bundesliga-de',

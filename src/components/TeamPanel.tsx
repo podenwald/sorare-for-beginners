@@ -6,6 +6,7 @@ import { LeagueMultiSelect } from './LeagueMultiSelect'
 import { computeFormationView } from '../api/formation'
 import { evaluatePlayer } from '../api/scoring'
 import {
+  ALL_LEAGUE_SLUGS,
   CANDIDATES_PER_POSITION,
   FORMATION_POSITIONS,
   MARKET_RARITIES,
@@ -31,7 +32,6 @@ export function TeamPanel({ label }: TeamPanelProps) {
   const [autoFillLeagues, setAutoFillLeagues] = useState<string[]>([])
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [autoFillError, setAutoFillError] = useState<string | null>(null)
-  const [stackLeagues, setStackLeagues] = useState<string[]>([])
   const [stackClubs, setStackClubs] = useState<{ slug: string; name: string }[]>([])
   const [stackClubSlug, setStackClubSlug] = useState<string>('')
   const [isLoadingClubs, setIsLoadingClubs] = useState(false)
@@ -47,7 +47,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     let cancelled = false
     setIsLoadingClubs(true)
     setStackError(null)
-    getLeagueClubs(stackLeagues)
+    getLeagueClubs(ALL_LEAGUE_SLUGS)
       .then((clubs) => {
         if (cancelled) return
         setStackClubs(clubs)
@@ -62,7 +62,7 @@ export function TeamPanel({ label }: TeamPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [mode, stackLeagues])
+  }, [mode])
 
   // Self-healing price refresh: re-fetches any shortlisted player whose prices were fetched
   // under a different rarity than the one currently selected. Since `shortlist` is a
@@ -244,7 +244,6 @@ export function TeamPanel({ label }: TeamPanelProps) {
 
       {mode === 'teamStack' && (
         <div className="team-stack">
-          <LeagueMultiSelect label={`${label} — Team-Stack Liga`} selectedSlugs={stackLeagues} onChange={setStackLeagues} />
           <select
             value={stackClubSlug}
             onChange={(event) => setStackClubSlug(event.target.value)}
