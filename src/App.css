@@ -247,6 +247,11 @@
   opacity: 0.75;
 }
 
+.auction-badge {
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
 .formation-total {
   display: flex;
   justify-content: space-between;

@@ -1,6 +1,7 @@
 import type { MarketOfferAmount, Player } from '../api/types'
 import type { EvaluationCategory, PlayerEvaluation } from '../api/scoring'
 import {
+  formatAuctionRemaining,
   formatMarketOfferAmount,
   formatMarketPrice,
   formatMarketRarity,
@@ -26,9 +27,11 @@ interface MarketPriceProps {
   eurCents: number | null
   offerAmount: MarketOfferAmount | null
   cardSlug: string | null
+  isAuction: boolean
+  auctionEndDate: string | null
 }
 
-function MarketPrice({ eurCents, offerAmount, cardSlug }: MarketPriceProps) {
+function MarketPrice({ eurCents, offerAmount, cardSlug, isAuction, auctionEndDate }: MarketPriceProps) {
   let formatted: string
   if (eurCents !== null) {
     formatted = formatMarketPrice(eurCents)
@@ -38,11 +41,19 @@ function MarketPrice({ eurCents, offerAmount, cardSlug }: MarketPriceProps) {
     formatted = formatMarketPrice(null)
   }
 
-  if (!cardSlug) return <>{formatted}</>
-  return (
+  const price = !cardSlug ? (
+    <>{formatted}</>
+  ) : (
     <a href={getMarketOfferUrl(cardSlug)} target="_blank" rel="noopener noreferrer">
       {formatted}
     </a>
+  )
+
+  if (!isAuction) return price
+  return (
+    <>
+      {price} <span className="auction-badge">(Auktion{auctionEndDate ? `, ${formatAuctionRemaining(auctionEndDate)}` : ''})</span>
+    </>
   )
 }
 
@@ -83,12 +94,16 @@ export function PlayerScoreSummary({ player, evaluation }: PlayerScoreSummaryPro
             eurCents={player.marketPrices.classicEurCents}
             offerAmount={player.marketPrices.classicOfferAmount}
             cardSlug={player.marketPrices.classicCardSlug}
+            isAuction={player.marketPrices.classicIsAuction}
+            auctionEndDate={player.marketPrices.classicAuctionEndDate}
           />{' '}
           · In-Season{' '}
           <MarketPrice
             eurCents={player.marketPrices.inSeasonEurCents}
             offerAmount={player.marketPrices.inSeasonOfferAmount}
             cardSlug={player.marketPrices.inSeasonCardSlug}
+            isAuction={player.marketPrices.inSeasonIsAuction}
+            auctionEndDate={player.marketPrices.inSeasonAuctionEndDate}
           />
         </small>
       </span>

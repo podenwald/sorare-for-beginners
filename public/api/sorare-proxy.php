@@ -54,10 +54,31 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
       # (Sorare does not auto-convert — e.g. a Solana-priced listing has lamport set and
       # eurCents/usdCents/gbpCents/wei all null), so all 5 currency fields are requested to
       # let the client fall back to displaying the offer's native currency when eurCents is null.
+      # ODI-315: a card for sale via auction rather than a fixed-price listing has no
+      # liveSingleSaleOffer at all, so latestEnglishAuction is requested alongside it. `bestBid`
+      # is null until someone actually bids, in which case `currentPrice`/`currency` (the auction's
+      # starting price, a plain decimal string) is the fallback — verify field names manually via
+      # curl against api.sorare.com/graphql after any change (no automated test, see l5/l10/l40 note).
       classicPrice: lowestPriceAnyCard(inSeason: false, rarity: $rarity) {
         slug
         liveSingleSaleOffer {
           receiverSide {
+            amounts {
+              eurCents
+              gbpCents
+              usdCents
+              lamport
+              wei
+              referenceCurrency
+            }
+          }
+        }
+        latestEnglishAuction {
+          open
+          endDate
+          currentPrice
+          currency
+          bestBid {
             amounts {
               eurCents
               gbpCents
@@ -73,6 +94,22 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
         slug
         liveSingleSaleOffer {
           receiverSide {
+            amounts {
+              eurCents
+              gbpCents
+              usdCents
+              lamport
+              wei
+              referenceCurrency
+            }
+          }
+        }
+        latestEnglishAuction {
+          open
+          endDate
+          currentPrice
+          currency
+          bestBid {
             amounts {
               eurCents
               gbpCents

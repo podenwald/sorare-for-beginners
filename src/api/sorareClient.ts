@@ -152,15 +152,26 @@ interface MarketAmountsRaw {
   referenceCurrency: SorareOfferCurrency
 }
 
+interface EnglishAuctionRaw {
+  open: boolean
+  endDate: string
+  currentPrice: string
+  currency: SorareOfferCurrency
+  bestBid: { amounts: MarketAmountsRaw } | null
+}
+
 interface MarketOfferCardRaw {
   slug: string
   liveSingleSaleOffer: { receiverSide: { amounts: MarketAmountsRaw } } | null
+  latestEnglishAuction: EnglishAuctionRaw | null
 }
 
 interface MarketOffer {
   eurCents: number | null
   offerAmount: MarketOfferAmount | null
   cardSlug: string
+  isAuction: boolean
+  auctionEndDate: string | null
 }
 
 // An offer's `amounts` only has the ONE field populated that matches its own referenceCurrency —
@@ -183,15 +194,64 @@ function deriveOfferAmount(amounts: MarketAmountsRaw): MarketOfferAmount | null 
   }
 }
 
+// `bestBid` only exists once someone has actually bid — before that, `currentPrice` is the
+// auction's starting price, given as a raw string in whatever unit `currency` natively uses
+// (verified live against api.sorare.com: a WEI-currency auction's currentPrice is byte-for-byte
+// identical to its bestBid.amounts.wei, e.g. both "29000000000000000" — not a decimal display
+// value). By the same pattern EUR/GBP/USD are presumed to be raw *Cents integers as a string;
+// no open fiat-denominated auction was available to confirm directly, so verify against a live
+// EUR/GBP/USD auction via curl if one turns up and this looks off. Wrapping it into the same
+// MarketAmountsRaw shape lets it flow through deriveOfferAmount/eurCents unchanged either way.
+function startingPriceAmounts(currentPrice: string, currency: SorareOfferCurrency): MarketAmountsRaw {
+  const amounts: MarketAmountsRaw = {
+    eurCents: null,
+    gbpCents: null,
+    usdCents: null,
+    lamport: null,
+    wei: null,
+    referenceCurrency: currency,
+  }
+  switch (currency) {
+    case 'EUR':
+      amounts.eurCents = Number(currentPrice)
+      break
+    case 'GBP':
+      amounts.gbpCents = Number(currentPrice)
+      break
+    case 'USD':
+      amounts.usdCents = Number(currentPrice)
+      break
+    case 'LAMPORT':
+      amounts.lamport = currentPrice
+      break
+    case 'WEI':
+      amounts.wei = currentPrice
+      break
+  }
+  return amounts
+}
+
+function extractAuctionAmounts(auction: EnglishAuctionRaw | null): { amounts: MarketAmountsRaw; endDate: string } | null {
+  if (!auction || !auction.open) return null
+  const amounts = auction.bestBid ? auction.bestBid.amounts : startingPriceAmounts(auction.currentPrice, auction.currency)
+  return { amounts, endDate: auction.endDate }
+}
+
+// ODI-315: a card with no fixed-price offer can still be for sale via an open English auction —
+// only fall back to the auction when there's no liveSingleSaleOffer at all, matching Sorare's
+// own exclusivity (a listed card is either a fixed-price sale or an auction, never both).
 function extractMarketOffer(card: MarketOfferCardRaw | null): MarketOffer | null {
-  const amounts = card?.liveSingleSaleOffer?.receiverSide?.amounts
-  if (card === null || !amounts) return null
+  if (!card) return null
+
+  const auction = card.liveSingleSaleOffer ? null : extractAuctionAmounts(card.latestEnglishAuction ?? null)
+  const amounts = card.liveSingleSaleOffer?.receiverSide?.amounts ?? auction?.amounts
+  if (!amounts) return null
 
   const eurCents = amounts.eurCents ?? null
   const offerAmount = eurCents === null ? deriveOfferAmount(amounts) : null
   if (eurCents === null && offerAmount === null) return null
 
-  return { eurCents, offerAmount, cardSlug: card.slug }
+  return { eurCents, offerAmount, cardSlug: card.slug, isAuction: auction !== null, auctionEndDate: auction?.endDate ?? null }
 }
 
 export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
@@ -242,6 +302,10 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
         inSeasonOfferAmount: inSeasonOffer?.offerAmount ?? null,
         classicCardSlug: classicOffer?.cardSlug ?? null,
         inSeasonCardSlug: inSeasonOffer?.cardSlug ?? null,
+        classicIsAuction: classicOffer?.isAuction ?? false,
+        inSeasonIsAuction: inSeasonOffer?.isAuction ?? false,
+        classicAuctionEndDate: classicOffer?.auctionEndDate ?? null,
+        inSeasonAuctionEndDate: inSeasonOffer?.auctionEndDate ?? null,
         rarity: marketRarity,
       }
     })(),

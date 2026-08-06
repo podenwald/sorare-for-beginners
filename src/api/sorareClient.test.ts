@@ -216,6 +216,10 @@ describe('getPlayer market prices', () => {
       inSeasonOfferAmount: null,
       classicCardSlug: 'kylian-mbappe-2024-limited-1',
       inSeasonCardSlug: 'kylian-mbappe-2025-limited-2',
+      classicIsAuction: false,
+      inSeasonIsAuction: false,
+      classicAuctionEndDate: null,
+      inSeasonAuctionEndDate: null,
       rarity: 'limited',
     })
   })
@@ -237,6 +241,10 @@ describe('getPlayer market prices', () => {
       inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
+      classicIsAuction: false,
+      inSeasonIsAuction: false,
+      classicAuctionEndDate: null,
+      inSeasonAuctionEndDate: null,
       rarity: 'limited',
     })
   })
@@ -253,6 +261,10 @@ describe('getPlayer market prices', () => {
       inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
+      classicIsAuction: false,
+      inSeasonIsAuction: false,
+      classicAuctionEndDate: null,
+      inSeasonAuctionEndDate: null,
       rarity: 'limited',
     })
   })
@@ -456,6 +468,10 @@ describe('getPlayer market prices', () => {
       inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
+      classicIsAuction: false,
+      inSeasonIsAuction: false,
+      classicAuctionEndDate: null,
+      inSeasonAuctionEndDate: null,
       rarity: 'limited',
     })
   })
@@ -477,6 +493,10 @@ describe('getPlayer market prices', () => {
       inSeasonOfferAmount: null,
       classicCardSlug: null,
       inSeasonCardSlug: null,
+      classicIsAuction: false,
+      inSeasonIsAuction: false,
+      classicAuctionEndDate: null,
+      inSeasonAuctionEndDate: null,
       rarity: 'limited',
     })
   })
@@ -507,6 +527,176 @@ describe('getPlayer market prices', () => {
     const call = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]
     const body = JSON.parse((call[1] as RequestInit).body as string)
     expect(body.variables.rarity).toBe('super_rare')
+  })
+})
+
+describe('getPlayer market prices — auctions (ODI-315)', () => {
+  function playerDetailResponse(classicPrice: unknown, inSeasonPrice: unknown) {
+    return {
+      data: {
+        anyPlayer: {
+          slug: 'kylian-mbappe-lottin',
+          displayName: 'Kylian Mbappé',
+          position: 'Forward',
+          age: 27,
+          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+          activeInjuries: [],
+          activeSuspensions: [],
+          allSo5Scores: { nodes: [] },
+          l5: null,
+          l10: null,
+          l40: null,
+          stats: null,
+          classicPrice,
+          inSeasonPrice,
+        },
+      },
+    }
+  }
+
+  it('falls back to an open auction bid when there is no fixed-price offer', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: null,
+          latestEnglishAuction: {
+            open: true,
+            endDate: '2026-08-10T12:00:00Z',
+            currentPrice: '2500',
+            currency: 'EUR',
+            bestBid: {
+              amounts: { eurCents: 2500, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBe(2500)
+    expect(player.marketPrices.classicCardSlug).toBe('kylian-mbappe-2024-limited-1')
+    expect(player.marketPrices.classicIsAuction).toBe(true)
+    expect(player.marketPrices.classicAuctionEndDate).toBe('2026-08-10T12:00:00Z')
+  })
+
+  it('falls back to the auction starting price (currentPrice) when no bid has been placed yet', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: null,
+          latestEnglishAuction: {
+            open: true,
+            endDate: '2026-08-10T12:00:00Z',
+            currentPrice: '1000',
+            currency: 'EUR',
+            bestBid: null,
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBe(1000)
+    expect(player.marketPrices.classicIsAuction).toBe(true)
+    expect(player.marketPrices.classicAuctionEndDate).toBe('2026-08-10T12:00:00Z')
+  })
+
+  it('derives a non-EUR offerAmount from the auction starting price the same way as a fixed-price offer', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: null,
+          latestEnglishAuction: {
+            open: true,
+            endDate: '2026-08-10T12:00:00Z',
+            currentPrice: '4500',
+            currency: 'GBP',
+            bestBid: null,
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBeNull()
+    expect(player.marketPrices.classicOfferAmount).toEqual({ currency: 'GBP', value: 45 })
+    expect(player.marketPrices.classicIsAuction).toBe(true)
+  })
+
+  it('ignores a closed auction and reports no offer, same as having no auction at all', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: null,
+          latestEnglishAuction: {
+            open: false,
+            endDate: '2026-08-01T12:00:00Z',
+            currentPrice: '2500',
+            currency: 'EUR',
+            bestBid: {
+              amounts: { eurCents: 2500, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBeNull()
+    expect(player.marketPrices.classicIsAuction).toBe(false)
+    expect(player.marketPrices.classicCardSlug).toBeNull()
+    expect(player.marketPrices.classicAuctionEndDate).toBeNull()
+  })
+
+  it('prefers a fixed-price offer over an auction when both are present on the same card', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: { eurCents: 5000, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
+          },
+          latestEnglishAuction: {
+            open: true,
+            endDate: '2026-08-10T12:00:00Z',
+            currentPrice: '2500',
+            currency: 'EUR',
+            bestBid: null,
+          },
+        },
+        null,
+      ),
+    )
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBe(5000)
+    expect(player.marketPrices.classicIsAuction).toBe(false)
+    expect(player.marketPrices.classicAuctionEndDate).toBeNull()
+  })
+
+  it('treats a missing latestEnglishAuction field the same as no auction (defensive against a partial response)', async () => {
+    mockFetchOnce(playerDetailResponse({ slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: null }, null))
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.classicEurCents).toBeNull()
+    expect(player.marketPrices.classicIsAuction).toBe(false)
+    expect(player.marketPrices.classicCardSlug).toBeNull()
   })
 })
 

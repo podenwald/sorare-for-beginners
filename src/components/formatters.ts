@@ -35,6 +35,15 @@ export function formatMarketOfferAmount(amount: MarketOfferAmount): string {
   }
 }
 
+export function formatAuctionRemaining(endDate: string): string {
+  const remainingMs = new Date(endDate).getTime() - Date.now()
+  if (remainingMs <= 0) return 'beendet'
+  const hours = Math.floor(remainingMs / (60 * 60 * 1000))
+  if (hours >= 24) return `noch ${Math.floor(hours / 24)} Tag(e)`
+  if (hours >= 1) return `noch ${hours} Std.`
+  return `noch ${Math.max(1, Math.floor(remainingMs / (60 * 1000)))} Min.`
+}
+
 export function formatMarketRarity(rarity: MarketRarity): string {
   return MARKET_RARITIES.find((entry) => entry.value === rarity)?.label ?? rarity
 }

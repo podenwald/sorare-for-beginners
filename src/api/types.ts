@@ -60,6 +60,14 @@ export interface MarketPrices {
   classicCardSlug: string | null
   /** Slug of the specific card the In-Season price/offer came from — null unless there's an active offer. */
   inSeasonCardSlug: string | null
+  /** True when the Classic price came from an open English auction rather than a fixed-price offer (only checked when there's no liveSingleSaleOffer). */
+  classicIsAuction: boolean
+  /** True when the In-Season price came from an open English auction rather than a fixed-price offer. */
+  inSeasonIsAuction: boolean
+  /** Auction end date for the Classic price, set only when classicIsAuction is true. */
+  classicAuctionEndDate: string | null
+  /** Auction end date for the In-Season price, set only when inSeasonIsAuction is true. */
+  inSeasonAuctionEndDate: string | null
   /** Which rarity these prices were fetched for — lets consumers detect stale data after a rarity-filter change. */
   rarity: MarketRarity
 }
