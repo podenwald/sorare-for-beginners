@@ -28,28 +28,38 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+// ODI-320: getPlayer issues a follow-up 'auctionFallbackCandidates' call whenever either side lacks
+// a primary offer. Appended to mockFetchSequence for tests where the fallback is expected to find
+// nothing, so the outcome (still "kein Angebot") stays the same as before the fallback existed.
+const AUCTION_FALLBACK_EMPTY = {
+  data: { anyPlayer: { classicCandidates: { nodes: [] }, inSeasonCandidates: { nodes: [] } } },
+}
+
 describe('getPlayer', () => {
   it('maps a successful response to a Player', async () => {
-    mockFetchOnce({
-      data: {
-        anyPlayer: {
-          slug: 'kylian-mbappe-lottin',
-          displayName: 'Kylian Mbappé',
-          position: 'Forward',
-          age: 27,
-          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
-          activeInjuries: [],
-          activeSuspensions: [],
-          allSo5Scores: {
-            nodes: [{ score: 87.7, game: { date: '2026-07-18T21:00:00Z' } }],
+    mockFetchSequence([
+      {
+        data: {
+          anyPlayer: {
+            slug: 'kylian-mbappe-lottin',
+            displayName: 'Kylian Mbappé',
+            position: 'Forward',
+            age: 27,
+            activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+            activeInjuries: [],
+            activeSuspensions: [],
+            allSo5Scores: {
+              nodes: [{ score: 87.7, game: { date: '2026-07-18T21:00:00Z' } }],
+            },
+            l5: null,
+            l10: null,
+            l40: null,
+            stats: { appearances: 31, minutesPlayed: 2606, substituteIn: 2, substituteOut: 9 },
           },
-          l5: null,
-          l10: null,
-          l40: null,
-          stats: { appearances: 31, minutesPlayed: 2606, substituteIn: 2, substituteOut: 9 },
         },
       },
-    })
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
     const expectedSeasonStartYear = getCurrentSeasonStartYear()
@@ -68,24 +78,27 @@ describe('getPlayer', () => {
   })
 
   it('maps a null stats field to seasonStats: null', async () => {
-    mockFetchOnce({
-      data: {
-        anyPlayer: {
-          slug: 'kylian-mbappe-lottin',
-          displayName: 'Kylian Mbappé',
-          position: 'Forward',
-          age: 27,
-          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
-          activeInjuries: [],
-          activeSuspensions: [],
-          allSo5Scores: { nodes: [] },
-          l5: null,
-          l10: null,
-          l40: null,
-          stats: null,
+    mockFetchSequence([
+      {
+        data: {
+          anyPlayer: {
+            slug: 'kylian-mbappe-lottin',
+            displayName: 'Kylian Mbappé',
+            position: 'Forward',
+            age: 27,
+            activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+            activeInjuries: [],
+            activeSuspensions: [],
+            allSo5Scores: { nodes: [] },
+            l5: null,
+            l10: null,
+            l40: null,
+            stats: null,
+          },
         },
       },
-    })
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -93,24 +106,27 @@ describe('getPlayer', () => {
   })
 
   it('maps l5/l10/l40 averageScore fields to sorareAverageScores', async () => {
-    mockFetchOnce({
-      data: {
-        anyPlayer: {
-          slug: 'kylian-mbappe-lottin',
-          displayName: 'Kylian Mbappé',
-          position: 'Forward',
-          age: 27,
-          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
-          activeInjuries: [],
-          activeSuspensions: [],
-          allSo5Scores: { nodes: [] },
-          l5: 74,
-          l10: 70,
-          l40: 64,
-          stats: null,
+    mockFetchSequence([
+      {
+        data: {
+          anyPlayer: {
+            slug: 'kylian-mbappe-lottin',
+            displayName: 'Kylian Mbappé',
+            position: 'Forward',
+            age: 27,
+            activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+            activeInjuries: [],
+            activeSuspensions: [],
+            allSo5Scores: { nodes: [] },
+            l5: 74,
+            l10: 70,
+            l40: 64,
+            stats: null,
+          },
         },
       },
-    })
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -118,24 +134,27 @@ describe('getPlayer', () => {
   })
 
   it('maps missing averageScore data to null fields in sorareAverageScores', async () => {
-    mockFetchOnce({
-      data: {
-        anyPlayer: {
-          slug: 'kylian-mbappe-lottin',
-          displayName: 'Kylian Mbappé',
-          position: 'Forward',
-          age: 27,
-          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
-          activeInjuries: [],
-          activeSuspensions: [],
-          allSo5Scores: { nodes: [] },
-          l5: null,
-          l10: null,
-          l40: null,
-          stats: null,
+    mockFetchSequence([
+      {
+        data: {
+          anyPlayer: {
+            slug: 'kylian-mbappe-lottin',
+            displayName: 'Kylian Mbappé',
+            position: 'Forward',
+            age: 27,
+            activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+            activeInjuries: [],
+            activeSuspensions: [],
+            allSo5Scores: { nodes: [] },
+            l5: null,
+            l10: null,
+            l40: null,
+            stats: null,
+          },
         },
       },
-    })
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -225,12 +244,13 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a card with no active offer (liveSingleSaleOffer: null) to null, including no card slug', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         { slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: null },
         { slug: 'kylian-mbappe-2025-limited-2', liveSingleSaleOffer: null },
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -250,7 +270,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps no matching card at all (classicPrice/inSeasonPrice: null) to null', async () => {
-    mockFetchOnce(playerDetailResponse(null, null))
+    mockFetchSequence([playerDetailResponse(null, null), AUCTION_FALLBACK_EMPTY])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -270,7 +290,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a live offer priced in Solana (lamport) to a SOL offerAmount when eurCents is null', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'michael-olise-2025-limited-278',
@@ -289,7 +309,8 @@ describe('getPlayer market prices', () => {
         },
         { slug: 'michael-olise-2025-limited-278', liveSingleSaleOffer: null },
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -299,7 +320,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a live offer priced in ETH (wei) to an ETH offerAmount when eurCents is null', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -318,7 +339,8 @@ describe('getPlayer market prices', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -326,7 +348,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a live offer priced in GBP to a GBP offerAmount when eurCents is null', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -338,7 +360,8 @@ describe('getPlayer market prices', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -346,7 +369,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a live offer priced in USD to a USD offerAmount when eurCents is null', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -358,7 +381,8 @@ describe('getPlayer market prices', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -366,7 +390,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('prefers eurCents over a native-currency offerAmount when both happen to be present', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -385,7 +409,8 @@ describe('getPlayer market prices', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -397,7 +422,7 @@ describe('getPlayer market prices', () => {
     // referenceCurrency says GBP, but `wei` (belonging to a different currency) is also non-null —
     // a legacy/inconsistent-looking response that should never happen in practice, but proves the
     // fix genuinely switches on referenceCurrency rather than just checking "which field is set".
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -416,7 +441,8 @@ describe('getPlayer market prices', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -424,7 +450,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps a live offer with no eurCents value and no other currency field to null, including no card slug', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -457,7 +483,8 @@ describe('getPlayer market prices', () => {
           },
         },
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -477,12 +504,13 @@ describe('getPlayer market prices', () => {
   })
 
   it('maps an offer whose receiverSide is missing entirely to null (defensive against a partial response)', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         { slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: {} },
         { slug: 'kylian-mbappe-2025-limited-2', liveSingleSaleOffer: {} },
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -502,7 +530,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('stamps the resulting marketPrices with the rarity the prices were fetched for', async () => {
-    mockFetchOnce(playerDetailResponse(null, null))
+    mockFetchSequence([playerDetailResponse(null, null), AUCTION_FALLBACK_EMPTY])
 
     const player = await getPlayer('kylian-mbappe-lottin', 'super_rare')
 
@@ -510,7 +538,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('passes the requested rarity as the rarity variable, defaulting to limited', async () => {
-    mockFetchOnce(playerDetailResponse(null, null))
+    mockFetchSequence([playerDetailResponse(null, null), AUCTION_FALLBACK_EMPTY])
 
     await getPlayer('kylian-mbappe-lottin')
 
@@ -520,7 +548,7 @@ describe('getPlayer market prices', () => {
   })
 
   it('passes an explicit rarity through as the rarity variable', async () => {
-    mockFetchOnce(playerDetailResponse(null, null))
+    mockFetchSequence([playerDetailResponse(null, null), AUCTION_FALLBACK_EMPTY])
 
     await getPlayer('kylian-mbappe-lottin', 'super_rare')
 
@@ -555,7 +583,7 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   }
 
   it('falls back to an open auction bid when there is no fixed-price offer', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -572,7 +600,8 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -583,7 +612,7 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   })
 
   it('falls back to the auction starting price (currentPrice) when no bid has been placed yet', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -598,7 +627,8 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -608,7 +638,7 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   })
 
   it('derives a non-EUR offerAmount from the auction starting price the same way as a fixed-price offer', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -623,7 +653,8 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -633,7 +664,7 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   })
 
   it('ignores a closed auction and reports no offer, same as having no auction at all', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -650,7 +681,8 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -661,7 +693,7 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   })
 
   it('prefers a fixed-price offer over an auction when both are present on the same card', async () => {
-    mockFetchOnce(
+    mockFetchSequence([
       playerDetailResponse(
         {
           slug: 'kylian-mbappe-2024-limited-1',
@@ -680,7 +712,8 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
         },
         null,
       ),
-    )
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
@@ -690,13 +723,115 @@ describe('getPlayer market prices — auctions (ODI-315)', () => {
   })
 
   it('treats a missing latestEnglishAuction field the same as no auction (defensive against a partial response)', async () => {
-    mockFetchOnce(playerDetailResponse({ slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: null }, null))
+    mockFetchSequence([
+      playerDetailResponse({ slug: 'kylian-mbappe-2024-limited-1', liveSingleSaleOffer: null }, null),
+      AUCTION_FALLBACK_EMPTY,
+    ])
 
     const player = await getPlayer('kylian-mbappe-lottin')
 
     expect(player.marketPrices.classicEurCents).toBeNull()
     expect(player.marketPrices.classicIsAuction).toBe(false)
     expect(player.marketPrices.classicCardSlug).toBeNull()
+  })
+})
+
+describe('getPlayer market prices — auction fallback via anyCards (ODI-320)', () => {
+  function playerDetailResponse(classicPrice: unknown, inSeasonPrice: unknown) {
+    return {
+      data: {
+        anyPlayer: {
+          slug: 'kylian-mbappe-lottin',
+          displayName: 'Kylian Mbappé',
+          position: 'Forward',
+          age: 27,
+          activeClub: { name: 'Real Madrid', slug: 'real-madrid-madrid' },
+          activeInjuries: [],
+          activeSuspensions: [],
+          allSo5Scores: { nodes: [] },
+          l5: null,
+          l10: null,
+          l40: null,
+          stats: null,
+          classicPrice,
+          inSeasonPrice,
+        },
+      },
+    }
+  }
+
+  function auction(open: boolean, endDate: string, eurCents: number | null) {
+    return {
+      open,
+      endDate,
+      currentPrice: String(eurCents ?? 0),
+      currency: 'EUR',
+      bestBid:
+        eurCents === null
+          ? null
+          : { amounts: { eurCents, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' } },
+    }
+  }
+
+  it('picks the open auction ending soonest, not the cheapest, from the anyCards fallback batch', async () => {
+    // lowestPriceAnyCard finds nothing for either side (no fixed offer, no card at all) — the
+    // fallback samples anyCards directly and must prefer the soonest-ending open auction (a
+    // deliberate product decision, not "lowest price wins") among a mix of open, closed, and
+    // auction-less candidates.
+    mockFetchSequence([
+      playerDetailResponse(null, null),
+      {
+        data: {
+          anyPlayer: {
+            classicCandidates: { nodes: [] },
+            inSeasonCandidates: {
+              nodes: [
+                { slug: 'card-cheap-later', latestEnglishAuction: auction(true, '2026-08-10T12:00:00Z', 500) },
+                { slug: 'card-expensive-sooner', latestEnglishAuction: auction(true, '2026-08-08T09:00:00Z', 9000) },
+                { slug: 'card-closed', latestEnglishAuction: auction(false, '2026-08-01T00:00:00Z', 100) },
+                { slug: 'card-no-auction', latestEnglishAuction: null },
+              ],
+            },
+          },
+        },
+      },
+    ])
+
+    const player = await getPlayer('kylian-mbappe-lottin')
+
+    expect(player.marketPrices.inSeasonEurCents).toBe(9000)
+    expect(player.marketPrices.inSeasonCardSlug).toBe('card-expensive-sooner')
+    expect(player.marketPrices.inSeasonIsAuction).toBe(true)
+    expect(player.marketPrices.inSeasonAuctionEndDate).toBe('2026-08-08T09:00:00Z')
+    expect(player.marketPrices.classicEurCents).toBeNull()
+    expect(player.marketPrices.classicCardSlug).toBeNull()
+  })
+
+  it('does not call the auction-fallback operation when both sides already have a primary offer', async () => {
+    mockFetchOnce(
+      playerDetailResponse(
+        {
+          slug: 'kylian-mbappe-2024-limited-1',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: { eurCents: 5498, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
+          },
+        },
+        {
+          slug: 'kylian-mbappe-2025-limited-2',
+          liveSingleSaleOffer: {
+            receiverSide: {
+              amounts: { eurCents: 6000, gbpCents: null, usdCents: null, lamport: null, wei: null, referenceCurrency: 'EUR' },
+            },
+          },
+        },
+      ),
+    )
+
+    await getPlayer('kylian-mbappe-lottin')
+
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -125,6 +125,63 @@ query PlayerDetail($slug: String!, $seasonStartYear: Int!, $rarity: Rarity = lim
   }
 }
 GRAPHQL,
+    // ODI-320: lowestPriceAnyCard returns null for a rarity/season combo whenever no card of that
+    // combo has an active FIXED-PRICE offer — even if another card instance of the same edition is
+    // for sale via an open English auction. As a fallback (only queried client-side when the main
+    // playerDetail query finds no offer on one or both sides), sample up to 30 cards of each side
+    // and let the client pick whichever open auction ends soonest (not cheapest — a deliberate
+    // product decision). Best-effort: editions can have up to ~1000 numbered copies, so this sample
+    // can't guarantee finding the true soonest-ending auction, only the soonest within the sample.
+    'auctionFallbackCandidates' => <<<'GRAPHQL'
+query AuctionFallbackCandidates($slug: String!, $rarity: Rarity!) {
+  anyPlayer(slug: $slug) {
+    ... on Player {
+      classicCandidates: anyCards(classicOnly: true, rarities: [$rarity], first: 30) {
+        nodes {
+          slug
+          latestEnglishAuction {
+            open
+            endDate
+            currentPrice
+            currency
+            bestBid {
+              amounts {
+                eurCents
+                gbpCents
+                usdCents
+                lamport
+                wei
+                referenceCurrency
+              }
+            }
+          }
+        }
+      }
+      inSeasonCandidates: anyCards(inSeasonEligible: true, rarities: [$rarity], first: 30) {
+        nodes {
+          slug
+          latestEnglishAuction {
+            open
+            endDate
+            currentPrice
+            currency
+            bestBid {
+              amounts {
+                eurCents
+                gbpCents
+                usdCents
+                lamport
+                wei
+                referenceCurrency
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+GRAPHQL,
     'playerSearch' => <<<'GRAPHQL'
 query PlayerSearch($query: String!, $page: Int, $pageSize: Int) {
   searchPlayers(query: $query, page: $page, pageSize: $pageSize) {

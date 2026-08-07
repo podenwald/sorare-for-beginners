@@ -254,6 +254,42 @@ function extractMarketOffer(card: MarketOfferCardRaw | null): MarketOffer | null
   return { eurCents, offerAmount, cardSlug: card.slug, isAuction: auction !== null, auctionEndDate: auction?.endDate ?? null }
 }
 
+interface AuctionCandidateRaw {
+  slug: string
+  latestEnglishAuction: EnglishAuctionRaw | null
+}
+
+interface AuctionFallbackCandidatesRaw {
+  anyPlayer: {
+    classicCandidates: { nodes: AuctionCandidateRaw[] }
+    inSeasonCandidates: { nodes: AuctionCandidateRaw[] }
+  } | null
+}
+
+// ODI-320: lowestPriceAnyCard returns null for a rarity/season combo whenever none of that combo's
+// cards has an active fixed-price offer — even if a different card instance of the same edition is
+// for sale via an open English auction. Picks whichever open auction in the sample ends soonest
+// (not cheapest — explicit product decision), so it can't guarantee finding the true soonest-ending
+// auction across large editions (up to ~1000 copies), only the soonest within the sampled batch.
+function soonestOpenAuctionOffer(candidates: AuctionCandidateRaw[]): MarketOffer | null {
+  let best: { slug: string; auction: { amounts: MarketAmountsRaw; endDate: string } } | null = null
+
+  for (const candidate of candidates) {
+    const auction = extractAuctionAmounts(candidate.latestEnglishAuction)
+    if (!auction) continue
+    if (!best || auction.endDate < best.auction.endDate) {
+      best = { slug: candidate.slug, auction }
+    }
+  }
+  if (!best) return null
+
+  const eurCents = best.auction.amounts.eurCents ?? null
+  const offerAmount = eurCents === null ? deriveOfferAmount(best.auction.amounts) : null
+  if (eurCents === null && offerAmount === null) return null
+
+  return { eurCents, offerAmount, cardSlug: best.slug, isAuction: true, auctionEndDate: best.auction.endDate }
+}
+
 export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limited'): Promise<Player> {
   const data = await callProxy<PlayerDetailRaw>('playerDetail', {
     slug,
@@ -266,6 +302,18 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
   }
 
   const raw = data.anyPlayer
+
+  let classicOffer = extractMarketOffer(raw.classicPrice)
+  let inSeasonOffer = extractMarketOffer(raw.inSeasonPrice)
+
+  if (!classicOffer || !inSeasonOffer) {
+    const fallback = await callProxy<AuctionFallbackCandidatesRaw>('auctionFallbackCandidates', {
+      slug,
+      rarity: marketRarity,
+    })
+    if (!classicOffer) classicOffer = soonestOpenAuctionOffer(fallback.anyPlayer?.classicCandidates.nodes ?? [])
+    if (!inSeasonOffer) inSeasonOffer = soonestOpenAuctionOffer(fallback.anyPlayer?.inSeasonCandidates.nodes ?? [])
+  }
 
   return {
     slug: raw.slug,
@@ -292,23 +340,19 @@ export async function getPlayer(slug: string, marketRarity: MarketRarity = 'limi
       l10: raw.l10,
       l40: raw.l40,
     },
-    marketPrices: (() => {
-      const classicOffer = extractMarketOffer(raw.classicPrice)
-      const inSeasonOffer = extractMarketOffer(raw.inSeasonPrice)
-      return {
-        classicEurCents: classicOffer?.eurCents ?? null,
-        inSeasonEurCents: inSeasonOffer?.eurCents ?? null,
-        classicOfferAmount: classicOffer?.offerAmount ?? null,
-        inSeasonOfferAmount: inSeasonOffer?.offerAmount ?? null,
-        classicCardSlug: classicOffer?.cardSlug ?? null,
-        inSeasonCardSlug: inSeasonOffer?.cardSlug ?? null,
-        classicIsAuction: classicOffer?.isAuction ?? false,
-        inSeasonIsAuction: inSeasonOffer?.isAuction ?? false,
-        classicAuctionEndDate: classicOffer?.auctionEndDate ?? null,
-        inSeasonAuctionEndDate: inSeasonOffer?.auctionEndDate ?? null,
-        rarity: marketRarity,
-      }
-    })(),
+    marketPrices: {
+      classicEurCents: classicOffer?.eurCents ?? null,
+      inSeasonEurCents: inSeasonOffer?.eurCents ?? null,
+      classicOfferAmount: classicOffer?.offerAmount ?? null,
+      inSeasonOfferAmount: inSeasonOffer?.offerAmount ?? null,
+      classicCardSlug: classicOffer?.cardSlug ?? null,
+      inSeasonCardSlug: inSeasonOffer?.cardSlug ?? null,
+      classicIsAuction: classicOffer?.isAuction ?? false,
+      inSeasonIsAuction: inSeasonOffer?.isAuction ?? false,
+      classicAuctionEndDate: classicOffer?.auctionEndDate ?? null,
+      inSeasonAuctionEndDate: inSeasonOffer?.auctionEndDate ?? null,
+      rarity: marketRarity,
+    },
   }
 }
 
