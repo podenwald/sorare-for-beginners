@@ -742,7 +742,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
           football: {
             competition: {
               name: 'Bundesliga',
-              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] },
+              teams: { nodes: [{ slug: 'club-a', name: 'Club A' }] },
             },
           },
         },
@@ -804,7 +804,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
       {
         data: {
           football: {
-            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+            competition: { name: 'Bundesliga', teams: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
           },
         },
       },
@@ -857,7 +857,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
       {
         data: {
           football: {
-            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+            competition: { name: 'Bundesliga', teams: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
           },
         },
       },
@@ -898,7 +898,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
           football: {
             competition: {
               name: 'Bundesliga',
-              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+              teams: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
             },
           },
         },
@@ -946,14 +946,14 @@ describe('searchPlayersByLeagueAndPosition', () => {
       {
         data: {
           football: {
-            competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
+            competition: { name: 'Bundesliga', teams: { nodes: [{ slug: 'club-a', name: 'Club A' }] } },
           },
         },
       },
       {
         data: {
           football: {
-            competition: { name: 'Ligue 1', clubs: { nodes: [{ slug: 'club-b', name: 'Club B' }] } },
+            competition: { name: 'Ligue 1', teams: { nodes: [{ slug: 'club-b', name: 'Club B' }] } },
           },
         },
       },
@@ -1002,7 +1002,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
           football: {
             competition: {
               name: 'Bundesliga',
-              clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+              teams: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
             },
           },
         },
@@ -1033,7 +1033,7 @@ describe('searchPlayersByLeagueAndPosition', () => {
 
   it('returns an empty array when the league has zero clubs', async () => {
     mockFetchSequence([
-      { data: { football: { competition: { name: 'Empty League', clubs: { nodes: [] } } } } },
+      { data: { football: { competition: { name: 'Empty League', teams: { nodes: [] } } } } },
     ])
 
     const hits = await searchPlayersByLeagueAndPosition(['empty-league'], 'Defender')
@@ -1058,7 +1058,7 @@ describe('getLeagueClubs', () => {
         football: {
           competition: {
             name: 'Bundesliga',
-            clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
+            teams: { nodes: [{ slug: 'club-a', name: 'Club A' }, { slug: 'club-b', name: 'Club B' }] },
           },
         },
       },
@@ -1084,8 +1084,8 @@ describe('getLeagueClubs', () => {
 
   it('unions clubs from multiple leagues', async () => {
     mockFetchSequence([
-      { data: { football: { competition: { name: 'Bundesliga', clubs: { nodes: [{ slug: 'club-a', name: 'Club A' }] } } } } },
-      { data: { football: { competition: { name: 'Ligue 1', clubs: { nodes: [{ slug: 'club-b', name: 'Club B' }] } } } } },
+      { data: { football: { competition: { name: 'Bundesliga', teams: { nodes: [{ slug: 'club-a', name: 'Club A' }] } } } } },
+      { data: { football: { competition: { name: 'Ligue 1', teams: { nodes: [{ slug: 'club-b', name: 'Club B' }] } } } } },
     ])
 
     const clubs = await getLeagueClubs(['bundesliga-de', 'ligue-1-fr'])
@@ -1095,8 +1095,8 @@ describe('getLeagueClubs', () => {
 
   it('dedupes a club that appears in more than one selected league', async () => {
     mockFetchSequence([
-      { data: { football: { competition: { name: 'League A', clubs: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
-      { data: { football: { competition: { name: 'League B', clubs: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
+      { data: { football: { competition: { name: 'League A', teams: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
+      { data: { football: { competition: { name: 'League B', teams: { nodes: [{ slug: 'club-x', name: 'Club X' }] } } } } },
     ])
 
     const clubs = await getLeagueClubs(['league-a', 'league-b'])

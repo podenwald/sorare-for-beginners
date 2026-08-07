@@ -354,7 +354,7 @@ interface LeagueClubsRaw {
   football: {
     competition: {
       name: string
-      clubs: { nodes: { slug: string; name: string }[] }
+      teams: { nodes: { slug: string; name: string }[] }
     } | null
   }
 }
@@ -395,7 +395,7 @@ export async function getLeagueClubs(leagueSlugs: string[]): Promise<{ slug: str
     leagueSlugs.map((leagueSlug) => callProxy<LeagueClubsRaw>('leagueClubs', { leagueSlug })),
   )
   const clubs = settled.flatMap((result) =>
-    result.status === 'fulfilled' ? result.value.football.competition?.clubs.nodes ?? [] : [],
+    result.status === 'fulfilled' ? result.value.football.competition?.teams.nodes ?? [] : [],
   )
   // Dedupe defensiv nach Slug — die Mehrfachauswahl erlaubt beliebige Liga-Kombinationen; ein Klub,
   // der in zwei ausgewählten Ligen auftaucht, ist zumindest theoretisch nicht ausgeschlossen.
